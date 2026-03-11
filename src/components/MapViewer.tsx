@@ -347,14 +347,10 @@ export default function MapViewer({
         if (!map.hasImage(name)) map.addImage(name, createAQIcon(level, 32), { sdf: false });
       }
 
-      // Thailand border highlight (Thailand only, with glow for smooth look)
-      fetch("https://raw.githubusercontent.com/johan/world.geo.json/master/countries/THA.geo.json")
+      // Thailand border highlight (high-res from OSM)
+      fetch("/geo/thailand.json")
         .then(r => r.json())
-        .then((tha) => {
-          const data = {
-            type: "FeatureCollection" as const,
-            features: tha.features || [tha],
-          };
+        .then((data) => {
           if (!map.getSource("country-borders")) {
             map.addSource("country-borders", { type: "geojson", data });
             // Subtle fill
