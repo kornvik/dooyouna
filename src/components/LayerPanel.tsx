@@ -15,7 +15,8 @@ import {
   Satellite,
   Info,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 interface LayerPanelProps {
   activeLayers: Set<LayerName>;
@@ -89,18 +90,27 @@ export default function LayerPanel({
   fastData,
   slowData,
 }: LayerPanelProps) {
+  const [collapsed, setCollapsed] = useState(false);
   const flights = fastData?.flights;
 
   return (
     <div className="hud-panel w-56 flex flex-col">
-      {/* Header */}
-      <div className="px-3 py-2 border-b border-[var(--border-color)]">
-        <div className="text-[10px] tracking-widest text-[var(--accent)] glow-text">
+      {/* Header — click to collapse */}
+      <button
+        onClick={() => setCollapsed((c) => !c)}
+        className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-between w-full text-left"
+      >
+        <span className="text-[10px] tracking-widest text-[var(--accent)] glow-text">
           ชั้นข้อมูล
-        </div>
-      </div>
+        </span>
+        <ChevronDown
+          size={12}
+          className="text-[var(--text-secondary)] transition-transform duration-200"
+          style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
+        />
+      </button>
 
-      <div className="p-1.5 flex flex-col gap-0.5 overflow-y-auto max-h-[70vh]">
+      {!collapsed && <div className="p-1.5 flex flex-col gap-0.5 overflow-y-auto max-h-[70vh]">
         {/* Flights */}
         <div className="px-2 pt-2 pb-1 text-[9px] tracking-wider text-[var(--text-secondary)] uppercase">
           เที่ยวบิน
@@ -252,7 +262,7 @@ export default function LayerPanel({
           source="Bangkok Post / Khmer Times / RSS"
           onToggle={onToggle}
         />
-      </div>
+      </div>}
     </div>
   );
 }
