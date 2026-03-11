@@ -37,7 +37,12 @@ async function getExisting(date: string, source: string): Promise<Row | null> {
  * For fires, stores the latest hourly count + tracks peak.
  * For AQ/earthquake/flood, stores latest value.
  */
-export async function POST() {
+export async function POST(request: Request) {
+  const token = new URL(request.url).searchParams.get("key")
+    ?? request.headers.get("x-cron-key");
+  if (token !== process.env.CRON_SECRET) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   const today = new Date().toISOString().slice(0, 10);
   const hour = new Date().getUTCHours();
   const rows: Row[] = [];
