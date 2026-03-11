@@ -7,6 +7,7 @@ import { AlertTriangle } from "lucide-react";
 interface ThreatIndexProps {
   fastData: FastData | null;
   slowData: SlowData | null;
+  panel?: "natural" | "security" | "both";
 }
 
 interface ThreatSignal {
@@ -108,7 +109,7 @@ function ThreatPanel({ title, signals, totalScore, level }: PanelData) {
   );
 }
 
-export default function ThreatIndex({ fastData, slowData }: ThreatIndexProps) {
+export default function ThreatIndex({ fastData, slowData, panel = "both" }: ThreatIndexProps) {
   const { naturalPanel, securityPanel } = useMemo(() => {
     // --- Fire hotspots (0-100) ---
     const fireCount = slowData?.fires?.length || 0;
@@ -202,6 +203,9 @@ export default function ThreatIndex({ fastData, slowData }: ThreatIndexProps) {
       } satisfies PanelData,
     };
   }, [fastData, slowData]);
+
+  if (panel === "natural") return <ThreatPanel {...naturalPanel} />;
+  if (panel === "security") return <ThreatPanel {...securityPanel} />;
 
   return (
     <div className="flex flex-col gap-2">

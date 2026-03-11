@@ -199,14 +199,15 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Bottom right: economic panel */}
-      <div className="absolute bottom-20 right-3 z-20">
+      {/* Bottom right: security index + economic panel */}
+      <div className="absolute bottom-4 right-3 z-20 flex flex-col gap-2">
+        <ThreatIndex fastData={fastData} slowData={slowData} panel="security" />
         <EconomicPanel />
       </div>
 
-      {/* Bottom left: threat index */}
+      {/* Bottom left: natural disaster index */}
       <div className="absolute bottom-4 left-3 z-20">
-        <ThreatIndex fastData={fastData} slowData={slowData} />
+        <ThreatIndex fastData={fastData} slowData={slowData} panel="natural" />
       </div>
     </div>
   );
