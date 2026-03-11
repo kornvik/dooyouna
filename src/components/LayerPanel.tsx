@@ -14,7 +14,7 @@ import {
   Droplets,
   Satellite,
   Info,
-  UtensilsCrossed,
+  Sun,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { ChevronDown } from "lucide-react";
@@ -264,19 +264,17 @@ export default function LayerPanel({
           onToggle={onToggle}
         />
 
-        {/* Kaprao Index */}
+        {/* Economic Activity */}
         <div className="px-2 pt-3 pb-1 text-[9px] tracking-wider text-[var(--text-secondary)] uppercase">
-          ดัชนีกะเพรา
+          กิจกรรมเศรษฐกิจ
         </div>
         <LayerItem
-          name="kaprao"
-          label="ร้านกะเพรา"
-          icon={<UtensilsCrossed size={13} />}
-          count={slowData?.kaprao?.length}
-          loading={!slowData}
-          active={activeLayers.has("kaprao")}
-          color="#ff8800"
-          source="Google Places API"
+          name="nightLights"
+          label="แสงกลางคืน VIIRS"
+          icon={<Sun size={13} />}
+          active={activeLayers.has("nightLights")}
+          color="#ffdd00"
+          source="NASA VIIRS Day/Night Band (Daily)"
           onToggle={onToggle}
         />
       </div>}

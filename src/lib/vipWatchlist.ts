@@ -2,6 +2,7 @@
 const WATCHLIST = new Map<string, string>([
   ["T7-GTS", "Tony"],
   ["HB-JLF", "Rolex Group"],
+  ["OY-PGA", "Golden Palace Medicine"],
 ]);
 
 /** Returns a short label if this registration is on the watchlist, else undefined */

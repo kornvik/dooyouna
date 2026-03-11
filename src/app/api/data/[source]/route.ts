@@ -8,7 +8,6 @@ import { fetchAirQuality } from "@/lib/fetchers/airQuality";
 import { fetchFlood } from "@/lib/fetchers/flood";
 import { fetchEconomic } from "@/lib/fetchers/economic";
 import { fetchShips } from "@/lib/fetchers/ships";
-import { fetchKaprao } from "@/lib/fetchers/kaprao";
 
 const FETCHERS: Record<string, { fn: () => Promise<unknown>; revalidate: number }> = {
   flights:     { fn: fetchFlights,      revalidate: 60 },
@@ -20,7 +19,6 @@ const FETCHERS: Record<string, { fn: () => Promise<unknown>; revalidate: number 
   flood:       { fn: fetchFlood,        revalidate: 1800 },
   economic:    { fn: fetchEconomic,     revalidate: 1800 },
   ships:       { fn: fetchShips,        revalidate: 1800 },
-  kaprao:      { fn: fetchKaprao,      revalidate: 86400 },
 };
 
 export async function GET(

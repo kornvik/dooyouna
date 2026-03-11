@@ -103,7 +103,6 @@ export interface SlowData {
   air_quality: AirQuality[];
   ships: Ship[];
   flood: FloodStation[];
-  kaprao: KapraoRestaurant[];
   updated: Record<string, string>;
 }
 
@@ -138,16 +137,6 @@ export interface RegionDossier {
   wikipedia?: WikipediaSummary | null;
 }
 
-export interface KapraoRestaurant {
-  name: string;
-  lat: number;
-  lon: number;
-  priceLevel: number;
-  rating: number;
-  totalRatings: number;
-  vicinity: string;
-}
-
 export interface EconomicData {
   set?: { price: number; change: number; changePercent: number };
   usdThb?: { rate: number };
@@ -168,4 +157,4 @@ export type LayerName =
   | "airQuality"
   | "flood"
   | "floodSatellite"
-  | "kaprao";
+  | "nightLights";

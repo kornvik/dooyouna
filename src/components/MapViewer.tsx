@@ -9,7 +9,7 @@ import {
   POPUP_CONFIG,
   formatFlight, formatDomestic, formatMilitary, formatPrivate,
   formatEarthquake, formatAirQuality, formatShip,
-  formatFlood, formatKaprao,
+  formatFlood,
 } from "@/lib/popupFormatters";
 import { getVipLabel } from "@/lib/vipWatchlist";
 
@@ -480,6 +480,40 @@ export default function MapViewer({
     }
   }, [activeLayers]);
 
+  // NASA VIIRS nighttime lights overlay (Black Marble + daily radiance)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapLoadedRef.current) return;
+
+    const nightId = "night-lights";
+    if (map.getLayer(nightId)) map.removeLayer(nightId);
+    if (map.getSource(nightId)) map.removeSource(nightId);
+
+    if (activeLayers.has("nightLights")) {
+      // Daily layer: yesterday's VIIRS Day/Night Band
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      const dateStr = d.toISOString().slice(0, 10);
+
+      map.addSource(nightId, {
+        type: "raster",
+        tiles: [
+          `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/VIIRS_SNPP_DayNightBand_At_Sensor_Radiance/default/${dateStr}/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png`,
+        ],
+        tileSize: 256,
+      });
+      map.addLayer(
+        {
+          id: nightId,
+          type: "raster",
+          source: nightId,
+          paint: { "raster-opacity": 0.85 },
+        },
+        "country-borders-fill" // insert below borders so borders stay visible
+      );
+    }
+  }, [activeLayers]);
+
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
@@ -515,7 +549,6 @@ function setupLayers(map: maplibregl.Map) {
     "private-flights",
     "earthquakes",
     "ships-source",
-    "kaprao-source",
   ];
   for (const id of plainSources) {
     map.addSource(id, {
@@ -824,26 +857,6 @@ function setupLayers(map: maplibregl.Map) {
     },
   });
 
-  // --- Kaprao index: circle markers colored by price level ---
-  map.addLayer({
-    id: "kaprao-layer",
-    type: "circle",
-    source: "kaprao-source",
-    paint: {
-      "circle-radius": [
-        "interpolate", ["linear"], ["zoom"],
-        5, 4, 10, 8, 14, 12,
-      ],
-      "circle-color": [
-        "interpolate", ["linear"], ["get", "priceLevel"],
-        0, "#00ff88", 1, "#88ff44", 2, "#ffaa00", 3, "#ff4444", 4, "#ff0044",
-      ],
-      "circle-opacity": 0.8,
-      "circle-stroke-width": 1,
-      "circle-stroke-color": "rgba(0,0,0,0.5)",
-    },
-  });
-
   // --- Cluster click-to-zoom ---
   for (const clusterId of ["fires-cluster", "air-quality-cluster", "flood-cluster"]) {
     const sourceId = clusterId === "fires-cluster" ? "fires"
@@ -901,7 +914,6 @@ function setupLayers(map: maplibregl.Map) {
   addPopup("ships-layer", formatShip);
 
   addPopup("flood-layer", formatFlood);
-  addPopup("kaprao-layer", formatKaprao);
 }
 
 // ---------------------------------------------------------------------------
@@ -958,7 +970,6 @@ function updateMapData(
     setSourceData("air-quality", toFeatures(slowData.air_quality || []));
     setSourceData("ships-source", toFeatures(slowData.ships || []));
     setSourceData("flood-source", toFeatures(slowData.flood || []));
-    setSourceData("kaprao-source", toFeatures(slowData.kaprao || []));
   }
 
   // Layer visibility
@@ -975,7 +986,7 @@ function updateMapData(
     airQuality: ["air-quality-layer", "air-quality-cluster"],
     flood: ["flood-layer", "flood-cluster"],
     floodSatellite: [], // managed as raster in separate useEffect
-    kaprao: ["kaprao-layer"],
+    nightLights: [], // managed as raster in separate useEffect
   };
 
   for (const [layerName, mapLayerIds] of Object.entries(layerMap)) {
