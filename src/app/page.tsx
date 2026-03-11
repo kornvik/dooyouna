@@ -164,7 +164,7 @@ export default function HomePage() {
           </Link>
           <button
             onClick={() => setShowDisclaimer(true)}
-            className="ml-1 text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors"
+            className="ml-1 text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors cursor-pointer"
           >
             <Info size={12} />
           </button>
@@ -309,7 +309,7 @@ export default function HomePage() {
             </p>
             <button
               onClick={() => setShowDisclaimer(false)}
-              className="text-[10px] tracking-wider px-4 py-1.5 border border-[var(--accent)] text-[var(--accent)] rounded hover:bg-[var(--accent)] hover:text-black transition-colors"
+              className="text-[10px] tracking-wider px-4 py-1.5 border border-[var(--accent)] text-[var(--accent)] rounded hover:bg-[var(--accent)] hover:text-black transition-colors cursor-pointer"
             >
               รับทราบ
             </button>
