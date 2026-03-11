@@ -9,7 +9,7 @@ import {
   POPUP_CONFIG,
   formatFlight, formatDomestic, formatMilitary, formatPrivate,
   formatEarthquake, formatAirQuality, formatShip,
-  formatFlood,
+  formatFlood, formatKaprao,
 } from "@/lib/popupFormatters";
 import { getVipLabel } from "@/lib/vipWatchlist";
 
@@ -519,6 +519,7 @@ function setupLayers(map: maplibregl.Map) {
     "private-flights",
     "earthquakes",
     "ships-source",
+    "kaprao-source",
   ];
   for (const id of plainSources) {
     map.addSource(id, {
@@ -827,6 +828,26 @@ function setupLayers(map: maplibregl.Map) {
     },
   });
 
+  // --- Kaprao index: circle markers colored by price level ---
+  map.addLayer({
+    id: "kaprao-layer",
+    type: "circle",
+    source: "kaprao-source",
+    paint: {
+      "circle-radius": [
+        "interpolate", ["linear"], ["zoom"],
+        5, 4, 10, 8, 14, 12,
+      ],
+      "circle-color": [
+        "interpolate", ["linear"], ["get", "priceLevel"],
+        0, "#00ff88", 1, "#88ff44", 2, "#ffaa00", 3, "#ff4444", 4, "#ff0044",
+      ],
+      "circle-opacity": 0.8,
+      "circle-stroke-width": 1,
+      "circle-stroke-color": "rgba(0,0,0,0.5)",
+    },
+  });
+
   // --- Cluster click-to-zoom ---
   for (const clusterId of ["fires-cluster", "air-quality-cluster", "flood-cluster"]) {
     const sourceId = clusterId === "fires-cluster" ? "fires"
@@ -884,6 +905,7 @@ function setupLayers(map: maplibregl.Map) {
   addPopup("ships-layer", formatShip);
 
   addPopup("flood-layer", formatFlood);
+  addPopup("kaprao-layer", formatKaprao);
 }
 
 // ---------------------------------------------------------------------------
@@ -940,6 +962,7 @@ function updateMapData(
     setSourceData("air-quality", toFeatures(slowData.air_quality || []));
     setSourceData("ships-source", toFeatures(slowData.ships || []));
     setSourceData("flood-source", toFeatures(slowData.flood || []));
+    setSourceData("kaprao-source", toFeatures(slowData.kaprao || []));
   }
 
   // Layer visibility
@@ -956,6 +979,7 @@ function updateMapData(
     airQuality: ["air-quality-layer", "air-quality-cluster"],
     flood: ["flood-layer", "flood-cluster"],
     floodSatellite: [], // managed as raster in separate useEffect
+    kaprao: ["kaprao-layer"],
   };
 
   for (const [layerName, mapLayerIds] of Object.entries(layerMap)) {

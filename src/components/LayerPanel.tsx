@@ -14,6 +14,7 @@ import {
   Droplets,
   Satellite,
   Info,
+  UtensilsCrossed,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { ChevronDown } from "lucide-react";
@@ -98,7 +99,7 @@ export default function LayerPanel({
       {/* Header — click to collapse */}
       <button
         onClick={() => setCollapsed((c) => !c)}
-        className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-between w-full text-left"
+        className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-between w-full text-left cursor-pointer"
       >
         <span className="text-[10px] tracking-widest text-[var(--accent)] glow-text">
           ชั้นข้อมูล
@@ -260,6 +261,22 @@ export default function LayerPanel({
           active={activeLayers.has("news")}
           color="#44aaff"
           source="Bangkok Post / Khmer Times / RSS"
+          onToggle={onToggle}
+        />
+
+        {/* Kaprao Index */}
+        <div className="px-2 pt-3 pb-1 text-[9px] tracking-wider text-[var(--text-secondary)] uppercase">
+          ดัชนีกะเพรา
+        </div>
+        <LayerItem
+          name="kaprao"
+          label="ร้านกะเพรา"
+          icon={<UtensilsCrossed size={13} />}
+          count={slowData?.kaprao?.length}
+          loading={!slowData}
+          active={activeLayers.has("kaprao")}
+          color="#ff8800"
+          source="Google Places API"
           onToggle={onToggle}
         />
       </div>}

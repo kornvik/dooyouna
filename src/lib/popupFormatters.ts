@@ -114,3 +114,16 @@ export function formatFlood(p: Props): string {
     <div style="color:var(--text-secondary);font-size:9px;">${p.datetime}</div>
   </div>`;
 }
+
+export function formatKaprao(p: Props): string {
+  const level = Number(p.priceLevel);
+  const color = level >= 3 ? "#ff4444" : level >= 2 ? "#ffaa00" : "#00ff88";
+  const baht = "฿".repeat(Math.max(1, level));
+  const stars = Number(p.rating) > 0 ? ` ★${p.rating}` : "";
+  return `<div ${POPUP_STYLE}>
+    <div style="color:${color};font-weight:bold;">🍳 ${p.name}</div>
+    <div>ราคา: <span style="color:${color};font-weight:bold;">${baht}</span> (${level}/4)${stars}</div>
+    ${Number(p.totalRatings) > 0 ? `<div>${p.totalRatings} รีวิว</div>` : ""}
+    <div style="color:var(--text-secondary);font-size:10px;">${p.vicinity || ""}</div>
+  </div>`;
+}

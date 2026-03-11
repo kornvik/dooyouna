@@ -17,6 +17,7 @@ const EMPTY_SLOW: SlowData = {
   air_quality: [],
   ships: [],
   flood: [],
+  kaprao: [],
   updated: {},
 };
 
@@ -87,7 +88,7 @@ export default function HomePage() {
 
     // Slow sources: each fetches independently, polls every 120s
     const slowSources = [
-      "earthquakes", "fires", "weather", "news", "air_quality", "flood", "ships",
+      "earthquakes", "fires", "weather", "news", "air_quality", "flood", "ships", "kaprao",
     ] as const;
 
     for (const source of slowSources) {
@@ -134,7 +135,7 @@ export default function HomePage() {
             DOOYOUNA
           </div>
           <div className="text-[10px] text-[var(--text-secondary)] tracking-wider">
-            ข่าวกรอง ไทย & กัมพูชา
+            ข่าวกรองประเทศไทย
           </div>
         </div>
 
