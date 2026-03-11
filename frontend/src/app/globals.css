@@ -1,0 +1,105 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #0a0e17;
+  --bg-secondary: #111827;
+  --bg-panel: rgba(10, 14, 23, 0.92);
+  --border-color: rgba(0, 255, 136, 0.15);
+  --text-primary: #e0e7ef;
+  --text-secondary: #8892a4;
+  --accent: #00ff88;
+  --accent-dim: rgba(0, 255, 136, 0.3);
+  --danger: #ff4444;
+  --warning: #ffaa00;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: "JetBrains Mono", "SF Mono", "Fira Code", monospace;
+  overflow: hidden;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--accent-dim);
+  border-radius: 2px;
+}
+
+/* MapLibre overrides */
+.maplibregl-ctrl-attrib {
+  display: none !important;
+}
+
+/* HUD panel base */
+.hud-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  backdrop-filter: blur(12px);
+  border-radius: 4px;
+}
+
+/* Glow effects */
+.glow-text {
+  text-shadow: 0 0 8px var(--accent-dim);
+}
+
+/* Pulse animation for live indicators */
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* CRT scanline overlay */
+.scanlines {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  z-index: 9999;
+}
+
+/* Layer toggle */
+.layer-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-radius: 3px;
+  font-size: 12px;
+}
+.layer-toggle:hover {
+  background: rgba(0, 255, 136, 0.05);
+}
+.layer-toggle.active {
+  background: rgba(0, 255, 136, 0.08);
+}

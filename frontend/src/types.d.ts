@@ -1,0 +1,112 @@
+export interface Aircraft {
+  hex: string;
+  callsign: string;
+  lat: number;
+  lon: number;
+  alt: number;
+  speed: number;
+  heading: number;
+  squawk: string;
+  type: string;
+  registration: string;
+  category?: string;
+  dbFlags?: number;
+}
+
+export interface FlightData {
+  commercial: Aircraft[];
+  military: Aircraft[];
+  private: Aircraft[];
+  total: number;
+}
+
+export interface Ship {
+  mmsi: string;
+  name: string;
+  lat: number;
+  lon: number;
+  course: number;
+  speed: number;
+  type: string;
+  country: string;
+}
+
+export interface Earthquake {
+  id: string;
+  lat: number;
+  lon: number;
+  depth: number;
+  magnitude: number;
+  place: string;
+  time: number;
+  url: string;
+}
+
+export interface FireHotspot {
+  lat: number;
+  lon: number;
+  frp?: number;
+  confidence?: string;
+}
+
+export interface NewsArticle {
+  title: string;
+  link: string;
+  source: string;
+  weight: number;
+  published: string;
+  summary: string;
+}
+
+export interface AirQuality {
+  location: string;
+  city: string;
+  country: string;
+  lat: number;
+  lon: number;
+  pm25: number;
+  lastUpdated: string;
+}
+
+export interface CCTVCamera {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  url: string;
+  source: string;
+}
+
+export interface WeatherData {
+  radar: string[];
+  host: string;
+}
+
+export interface FastData {
+  flights: FlightData;
+  military_flights: Aircraft[];
+  cctv: CCTVCamera[];
+  updated: Record<string, string>;
+}
+
+export interface SlowData {
+  earthquakes: Earthquake[];
+  fires: FireHotspot[];
+  weather: WeatherData;
+  news: NewsArticle[];
+  air_quality: AirQuality[];
+  ships: Ship[];
+  updated: Record<string, string>;
+}
+
+export type LayerName =
+  | "commercial"
+  | "military"
+  | "private"
+  | "ships"
+  | "earthquakes"
+  | "fires"
+  | "weather"
+  | "news"
+  | "cctv"
+  | "airQuality";
