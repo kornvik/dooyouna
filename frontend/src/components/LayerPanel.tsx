@@ -7,12 +7,13 @@ import {
   Flame,
   CloudRain,
   Newspaper,
-  Camera,
   Wind,
   Activity,
   Shield,
   Briefcase,
   Droplets,
+  Satellite,
+  Info,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -28,8 +29,10 @@ interface LayerItemProps {
   label: string;
   icon: ReactNode;
   count?: number;
+  loading?: boolean;
   active: boolean;
   color: string;
+  source: string;
   onToggle: (name: LayerName) => void;
 }
 
@@ -38,8 +41,10 @@ function LayerItem({
   label,
   icon,
   count,
+  loading,
   active,
   color,
+  source,
   onToggle,
 }: LayerItemProps) {
   return (
@@ -60,11 +65,20 @@ function LayerItem({
       >
         {label}
       </span>
-      {count !== undefined && (
+      {loading ? (
+        <span
+          className="inline-block w-3 h-3 border border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: `${color}44`, borderTopColor: "transparent" }}
+        />
+      ) : count !== undefined ? (
         <span className="text-[10px]" style={{ color: "var(--text-secondary)" }}>
           {count}
         </span>
-      )}
+      ) : null}
+      <span className="info-tooltip-wrapper flex-shrink-0">
+        <Info size={9} style={{ color: "var(--text-secondary)" }} className="opacity-30" />
+        <span className="info-tooltip">{source}</span>
+      </span>
     </button>
   );
 }
@@ -82,129 +96,149 @@ export default function LayerPanel({
       {/* Header */}
       <div className="px-3 py-2 border-b border-[var(--border-color)]">
         <div className="text-[10px] tracking-widest text-[var(--accent)] glow-text">
-          DATA LAYERS
+          ชั้นข้อมูล
         </div>
       </div>
 
       <div className="p-1.5 flex flex-col gap-0.5 overflow-y-auto max-h-[70vh]">
-        {/* Aviation */}
+        {/* Flights */}
         <div className="px-2 pt-2 pb-1 text-[9px] tracking-wider text-[var(--text-secondary)] uppercase">
-          Aviation
+          เที่ยวบิน
         </div>
         <LayerItem
           name="commercial"
-          label="Commercial"
+          label="พาณิชย์"
           icon={<Plane size={13} />}
           count={flights?.commercial?.length}
+          loading={!fastData}
           active={activeLayers.has("commercial")}
           color="#00d4ff"
+          source="ADS-B Exchange / OpenSky"
           onToggle={onToggle}
         />
         <LayerItem
+          name="private"
+          label="เครื่องบินส่วนตัว"
+          icon={<Briefcase size={13} />}
+          count={flights?.private?.length}
+          loading={!fastData}
+          active={activeLayers.has("private")}
+          color="#ff8800"
+          source="ADS-B Exchange"
+          onToggle={onToggle}
+        />
+
+        {/* Security */}
+        <div className="px-2 pt-3 pb-1 text-[9px] tracking-wider text-[var(--text-secondary)] uppercase">
+          ความมั่นคง
+        </div>
+        <LayerItem
           name="military"
-          label="Military"
+          label="เที่ยวบินทหาร"
           icon={<Shield size={13} />}
           count={
             (flights?.military?.length || 0) +
             (fastData?.military_flights?.length || 0)
           }
+          loading={!fastData}
           active={activeLayers.has("military")}
           color="#ffdd00"
+          source="ADS-B Exchange / MILMOD DB"
           onToggle={onToggle}
         />
-        <LayerItem
-          name="private"
-          label="Private / Jets"
-          icon={<Briefcase size={13} />}
-          count={flights?.private?.length}
-          active={activeLayers.has("private")}
-          color="#ff8800"
-          onToggle={onToggle}
-        />
-
-        {/* Maritime */}
-        <div className="px-2 pt-3 pb-1 text-[9px] tracking-wider text-[var(--text-secondary)] uppercase">
-          Maritime
-        </div>
         <LayerItem
           name="ships"
-          label="Vessels"
+          label="เรือ"
           icon={<Ship size={13} />}
           count={slowData?.ships?.length}
+          loading={!slowData}
           active={activeLayers.has("ships")}
           color="#00ff88"
+          source="AIS (MarineTraffic)"
           onToggle={onToggle}
         />
 
-        {/* Environment */}
+        {/* Natural Hazards */}
         <div className="px-2 pt-3 pb-1 text-[9px] tracking-wider text-[var(--text-secondary)] uppercase">
-          Environment
+          ภัยธรรมชาติ
         </div>
         <LayerItem
           name="earthquakes"
-          label="Earthquakes"
+          label="แผ่นดินไหว"
           icon={<Activity size={13} />}
           count={slowData?.earthquakes?.length}
+          loading={!slowData}
           active={activeLayers.has("earthquakes")}
           color="#ff4444"
+          source="USGS Earthquake API"
           onToggle={onToggle}
         />
         <LayerItem
           name="fires"
-          label="Fire Hotspots"
+          label="จุดความร้อน"
           icon={<Flame size={13} />}
           count={slowData?.fires?.length}
+          loading={!slowData}
           active={activeLayers.has("fires")}
           color="#ff4400"
-          onToggle={onToggle}
-        />
-        <LayerItem
-          name="airQuality"
-          label="PM2.5 Air Quality"
-          icon={<Wind size={13} />}
-          count={slowData?.air_quality?.length}
-          active={activeLayers.has("airQuality")}
-          color="#cc00ff"
+          source="NASA FIRMS (VIIRS/MODIS)"
           onToggle={onToggle}
         />
         <LayerItem
           name="flood"
-          label="Flood / Water Level"
+          label="น้ำท่วม / ระดับน้ำ"
           icon={<Droplets size={13} />}
           count={slowData?.flood?.length}
+          loading={!slowData}
           active={activeLayers.has("flood")}
           color="#4488ff"
+          source="สสน. (thaiwater.net)"
+          onToggle={onToggle}
+        />
+        <LayerItem
+          name="floodSatellite"
+          label="ดาวเทียมน้ำท่วม"
+          icon={<Satellite size={13} />}
+          active={activeLayers.has("floodSatellite")}
+          color="#0066ff"
+          source="NASA GIBS (MODIS Flood 3-Day)"
           onToggle={onToggle}
         />
         <LayerItem
           name="weather"
-          label="Weather Radar"
+          label="เรดาร์สภาพอากาศ"
           icon={<CloudRain size={13} />}
+          loading={!slowData}
           active={activeLayers.has("weather")}
           color="#4488ff"
+          source="RainViewer API"
+          onToggle={onToggle}
+        />
+        <LayerItem
+          name="airQuality"
+          label="คุณภาพอากาศ PM2.5"
+          icon={<Wind size={13} />}
+          count={slowData?.air_quality?.length}
+          loading={!slowData}
+          active={activeLayers.has("airQuality")}
+          color="#cc00ff"
+          source="กรมควบคุมมลพิษ (air4thai)"
           onToggle={onToggle}
         />
 
         {/* Intelligence */}
         <div className="px-2 pt-3 pb-1 text-[9px] tracking-wider text-[var(--text-secondary)] uppercase">
-          Intelligence
+          ข่าวกรอง
         </div>
         <LayerItem
           name="news"
-          label="News Feed"
+          label="ฟีดข่าว"
           icon={<Newspaper size={13} />}
           count={slowData?.news?.length}
+          loading={!slowData}
           active={activeLayers.has("news")}
           color="#44aaff"
-          onToggle={onToggle}
-        />
-        <LayerItem
-          name="cctv"
-          label="CCTV Cameras"
-          icon={<Camera size={13} />}
-          count={fastData?.cctv?.length}
-          active={activeLayers.has("cctv")}
-          color="#aa88ff"
+          source="Bangkok Post / Khmer Times / RSS"
           onToggle={onToggle}
         />
       </div>

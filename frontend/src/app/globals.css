@@ -143,3 +143,29 @@ body {
 .layer-toggle.active {
   background: rgba(0, 255, 136, 0.08);
 }
+
+/* Info tooltip for layer source */
+.info-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.info-tooltip {
+  display: none;
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  white-space: nowrap;
+  background: rgba(10, 14, 23, 0.96);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  color: var(--text-secondary);
+  font-size: 9px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+.info-tooltip-wrapper:hover .info-tooltip {
+  display: block;
+}

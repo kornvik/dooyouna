@@ -1,12 +1,23 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import LayerPanel from "@/components/LayerPanel";
 import NewsFeed from "@/components/NewsFeed";
 import ThreatIndex from "@/components/ThreatIndex";
-import { fetchFastData, fetchSlowData } from "@/lib/api";
+import { fetchSource } from "@/lib/api";
 import type { FastData, LayerName, SlowData } from "@/types";
+
+const EMPTY_SLOW: SlowData = {
+  earthquakes: [],
+  fires: [],
+  weather: { radar: [], host: "" },
+  news: [],
+  air_quality: [],
+  ships: [],
+  flood: [],
+  updated: {},
+};
 
 // Dynamic import to avoid SSR issues with MapLibre
 const MapViewer = dynamic(() => import("@/components/MapViewer"), {
@@ -14,7 +25,7 @@ const MapViewer = dynamic(() => import("@/components/MapViewer"), {
   loading: () => (
     <div className="w-full h-full bg-[var(--bg-primary)] flex items-center justify-center">
       <div className="text-[var(--accent)] text-sm glow-text">
-        INITIALIZING MAP...
+        กำลังโหลดแผนที่...
       </div>
     </div>
   ),
@@ -31,14 +42,13 @@ const DEFAULT_LAYERS: LayerName[] = [
 
 export default function HomePage() {
   const [fastData, setFastData] = useState<FastData | null>(null);
-  const [slowData, setSlowData] = useState<SlowData | null>(null);
+  const [slowData, setSlowData] = useState<SlowData>(EMPTY_SLOW);
   const [activeLayers, setActiveLayers] = useState<Set<LayerName>>(
     () => new Set(DEFAULT_LAYERS)
   );
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "live" | "error"
   >("connecting");
-  const etagRef = useRef<string>("");
 
   // Toggle layer
   const handleToggle = useCallback((layer: LayerName) => {
@@ -50,50 +60,51 @@ export default function HomePage() {
     });
   }, []);
 
-  // Poll fast data every 60s
+  // Progressive data loading: each source fetched independently
   useEffect(() => {
     let mounted = true;
+    const intervals: ReturnType<typeof setInterval>[] = [];
 
-    const poll = async () => {
+    // Flights: fast poll (60s)
+    const pollFlights = async () => {
       try {
-        const result = await fetchFastData(etagRef.current);
-        if (!mounted) return;
-        if (!result.notModified && result.data) {
-          setFastData(result.data);
-          etagRef.current = result.etag || "";
-        }
+        const data = await fetchSource("flights");
+        if (!mounted || !data) return;
+        setFastData({
+          flights: data.flights || { commercial: [], military: [], private: [], total: 0 },
+          military_flights: data.military_flights || [],
+          updated: {},
+        });
         setConnectionStatus("live");
       } catch {
         if (mounted) setConnectionStatus("error");
       }
     };
+    pollFlights();
+    intervals.push(setInterval(pollFlights, 60_000));
 
-    poll();
-    const interval = setInterval(poll, 60_000);
+    // Slow sources: each fetches independently, polls every 120s
+    const slowSources = [
+      "earthquakes", "fires", "weather", "news", "air_quality", "flood",
+    ] as const;
+
+    for (const source of slowSources) {
+      const poll = async () => {
+        try {
+          const data = await fetchSource(source);
+          if (!mounted || data == null) return;
+          setSlowData(prev => ({ ...prev, [source]: data }));
+        } catch {
+          // keep previous data
+        }
+      };
+      poll();
+      intervals.push(setInterval(poll, 120_000));
+    }
+
     return () => {
       mounted = false;
-      clearInterval(interval);
-    };
-  }, []);
-
-  // Poll slow data every 120s
-  useEffect(() => {
-    let mounted = true;
-
-    const poll = async () => {
-      try {
-        const data = await fetchSlowData();
-        if (mounted) setSlowData(data);
-      } catch {
-        // keep previous data
-      }
-    };
-
-    poll();
-    const interval = setInterval(poll, 120_000);
-    return () => {
-      mounted = false;
-      clearInterval(interval);
+      intervals.forEach(clearInterval);
     };
   }, []);
 
@@ -123,7 +134,7 @@ export default function HomePage() {
             DOOYOUNA
           </div>
           <div className="text-[10px] text-[var(--text-secondary)] tracking-wider">
-            TH & KH OSINT
+            ข่าวกรอง ไทย & กัมพูชา
           </div>
         </div>
 
@@ -140,31 +151,31 @@ export default function HomePage() {
               }`}
             />
             <span className="text-[var(--text-secondary)] uppercase">
-              {connectionStatus}
+              {connectionStatus === "live" ? "เชื่อมต่อ" : connectionStatus === "error" ? "ผิดพลาด" : "กำลังเชื่อมต่อ"}
             </span>
           </div>
 
           {/* Stats */}
           <div className="flex items-center gap-3 text-[var(--text-secondary)]">
             <span>
-              <span className="text-[#00d4ff]">{totalFlights}</span> aircraft
+              <span className="text-[#00d4ff]">{totalFlights}</span> เครื่องบิน
             </span>
             <span>
               <span className="text-[#ff4400]">
                 {slowData?.fires?.length || 0}
               </span>{" "}
-              fires
+              จุดไฟ
             </span>
             <span>
               <span className="text-[#cc00ff]">
                 {slowData?.air_quality?.length || 0}
               </span>{" "}
-              AQ sensors
+              สถานี AQ
             </span>
           </div>
 
           {/* UTC time */}
-          <UTCClock />
+          <DualClock />
         </div>
       </div>
 
@@ -194,14 +205,19 @@ export default function HomePage() {
   );
 }
 
-function UTCClock() {
-  const [time, setTime] = useState("");
+function DualClock() {
+  const [localTime, setLocalTime] = useState("");
+  const [thaiTime, setThaiTime] = useState("");
 
   useEffect(() => {
     const update = () => {
       const now = new Date();
-      setTime(
-        now.toISOString().slice(11, 19) + "Z"
+      setLocalTime(now.toLocaleTimeString("en-GB", { hour12: false }));
+      setThaiTime(
+        now.toLocaleTimeString("th-TH", {
+          hour12: false,
+          timeZone: "Asia/Bangkok",
+        })
       );
     };
     update();
@@ -210,8 +226,13 @@ function UTCClock() {
   }, []);
 
   return (
-    <span className="text-[var(--accent)] font-mono tracking-wider">
-      {time}
-    </span>
+    <div className="flex gap-3 text-[10px] font-mono tracking-wider">
+      <span className="text-[var(--text-secondary)]">
+        LOCAL <span className="text-[var(--accent)]">{localTime}</span>
+      </span>
+      <span className="text-[var(--text-secondary)]">
+        TH <span className="text-[var(--accent)]">{thaiTime}</span>
+      </span>
+    </div>
   );
 }

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DooYouNa - Thailand & Cambodia OSINT",
-  description: "Open-source intelligence dashboard for Thailand and Cambodia",
+  title: "DooYouNa - แดชบอร์ดข่าวกรอง ไทย & กัมพูชา",
+  description: "ระบบเฝ้าระวังข่าวกรองโอเพ่นซอร์ส ประเทศไทยและกัมพูชา",
 };
 
 export default function RootLayout({
@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="th">
       <body>{children}</body>
     </html>
   );

@@ -68,15 +68,6 @@ export interface AirQuality {
   lastUpdated: string;
 }
 
-export interface CCTVCamera {
-  id: string;
-  name: string;
-  lat: number;
-  lon: number;
-  url: string;
-  source: string;
-}
-
 export interface WeatherData {
   radar: string[];
   host: string;
@@ -85,7 +76,6 @@ export interface WeatherData {
 export interface FastData {
   flights: FlightData;
   military_flights: Aircraft[];
-  cctv: CCTVCamera[];
   updated: Record<string, string>;
 }
 
@@ -115,6 +105,37 @@ export interface SlowData {
   updated: Record<string, string>;
 }
 
+export interface WikipediaSummary {
+  title: string;
+  extract: string;
+  thumbnail: string;
+}
+
+export interface CountryInfo {
+  name: string;
+  official_name: string;
+  capital: string[];
+  population: number;
+  area: number;
+  languages: Record<string, string>;
+  currencies: Record<string, string>;
+  flag: string;
+  borders: string[];
+  region: string;
+}
+
+export interface RegionDossier {
+  lat: number;
+  lon: number;
+  location?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  country_code?: string;
+  country_info?: CountryInfo;
+  wikipedia?: WikipediaSummary | null;
+}
+
 export type LayerName =
   | "commercial"
   | "military"
@@ -124,6 +145,6 @@ export type LayerName =
   | "fires"
   | "weather"
   | "news"
-  | "cctv"
   | "airQuality"
-  | "flood";
+  | "flood"
+  | "floodSatellite";
