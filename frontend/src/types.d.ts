@@ -89,6 +89,21 @@ export interface FastData {
   updated: Record<string, string>;
 }
 
+export interface FloodStation {
+  lat: number;
+  lon: number;
+  name: string;
+  name_th: string;
+  province: string;
+  province_th: string;
+  basin: string;
+  water_level_msl: string | null;
+  situation_level: number;
+  bank_diff: string | null;
+  datetime: string;
+  critical: boolean;
+}
+
 export interface SlowData {
   earthquakes: Earthquake[];
   fires: FireHotspot[];
@@ -96,6 +111,7 @@ export interface SlowData {
   news: NewsArticle[];
   air_quality: AirQuality[];
   ships: Ship[];
+  flood: FloodStation[];
   updated: Record<string, string>;
 }
 
@@ -109,4 +125,5 @@ export type LayerName =
   | "weather"
   | "news"
   | "cctv"
-  | "airQuality";
+  | "airQuality"
+  | "flood";

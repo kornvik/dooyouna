@@ -102,6 +102,7 @@ export default function MapViewer({
       },
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
+      maxZoom: 18,
       maxBounds: [
         [85, -5],
         [120, 28],
@@ -255,6 +256,7 @@ function setupLayers(map: maplibregl.Map) {
     "air-quality",
     "ships-source",
     "cctv-source",
+    "flood-source",
   ];
   for (const id of sources) {
     map.addSource(id, {
@@ -393,6 +395,32 @@ function setupLayers(map: maplibregl.Map) {
     },
   });
 
+  // --- Flood / Water Level ---
+  map.addLayer({
+    id: "flood-layer",
+    type: "circle",
+    source: "flood-source",
+    paint: {
+      "circle-radius": [
+        "case",
+        ["get", "critical"], 10,
+        7,
+      ],
+      "circle-color": [
+        "case",
+        ["get", "critical"], "#ff0044",
+        "#4488ff",
+      ],
+      "circle-opacity": 0.8,
+      "circle-stroke-width": 2,
+      "circle-stroke-color": [
+        "case",
+        ["get", "critical"], "rgba(255,0,68,0.4)",
+        "rgba(68,136,255,0.4)",
+      ],
+    },
+  });
+
   // --- Click popup handlers ---
   const popupStyle =
     'style="color:#e0e7ef;font-family:monospace;font-size:11px;padding:4px;"';
@@ -489,6 +517,21 @@ function setupLayers(map: maplibregl.Map) {
       ${p.url ? `<div style="margin-top:4px;"><img src="${p.url}" style="max-width:260px;border-radius:3px;" onerror="this.style.display='none'" /></div>` : ""}
     </div>`
   );
+
+  addPopup(
+    "flood-layer",
+    (p) => `<div ${popupStyle}>
+      <div style="color:${p.critical === "true" || p.critical === true ? "#ff0044" : "#4488ff"};font-weight:bold;">
+        ${p.critical === "true" || p.critical === true ? "CRITICAL FLOOD" : "HIGH WATER"}
+      </div>
+      <div>${p.name || p.name_th}</div>
+      <div>${p.province || p.province_th}</div>
+      <div>Basin: ${p.basin || "N/A"}</div>
+      ${p.water_level_msl ? `<div>Level: ${p.water_level_msl} MSL</div>` : ""}
+      ${p.bank_diff ? `<div>Over bank: ${p.bank_diff} m</div>` : ""}
+      <div style="color:var(--text-secondary);font-size:9px;">${p.datetime}</div>
+    </div>`
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -540,6 +583,7 @@ function updateMapData(
     setSourceData("fires", toFeatures(slowData.fires || []));
     setSourceData("air-quality", toFeatures(slowData.air_quality || []));
     setSourceData("ships-source", toFeatures(slowData.ships || []));
+    setSourceData("flood-source", toFeatures(slowData.flood || []));
   }
 
   // Layer visibility
@@ -554,6 +598,7 @@ function updateMapData(
     news: [],
     cctv: ["cctv-layer"],
     airQuality: ["air-quality-layer"],
+    flood: ["flood-layer"],
   };
 
   for (const [layerName, mapLayerIds] of Object.entries(layerMap)) {

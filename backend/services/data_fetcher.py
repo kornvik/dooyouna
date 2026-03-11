@@ -151,26 +151,13 @@ def fetch_military_flights() -> list:
 # Maritime / AIS (simple HTTP fallback - no WebSocket key needed)
 # ---------------------------------------------------------------------------
 def fetch_ships() -> list:
-    """
-    Fetch vessel positions. Uses MarineTraffic-style public endpoints.
-    Falls back to empty if no AIS_API_KEY configured.
-    """
-    # We'll use a public AIS endpoint that provides basic vessel data
-    # For full data, users should configure AIS_API_KEY for aisstream.io
+    """Get vessel positions from the live AIS WebSocket stream."""
     try:
-        bbox = REGION_BBOX
-        url = (
-            f"https://meri.digitraffic.fi/api/ais/v1/locations"
-            f"?from={bbox['min_lat']},{bbox['min_lon']}"
-            f"&to={bbox['max_lat']},{bbox['max_lon']}"
-        )
-        # This Finnish endpoint only covers Finland waters - for TH/KH we need
-        # a different approach. Use a cached/sample dataset or AIS stream.
-        # For now, return empty and let AIS stream populate when key is set.
-        return latest_data.get("ships", [])
+        from services.ais_stream import get_vessels
+        return get_vessels()
     except Exception as e:
         logger.error(f"Ship fetch error: {e}")
-        return []
+        return latest_data.get("ships", [])
 
 
 # ---------------------------------------------------------------------------
@@ -434,6 +421,64 @@ def fetch_air_quality() -> list:
 
 
 # ---------------------------------------------------------------------------
+# Flood / Water level monitoring (Thai HII / thaiwater.net)
+# ---------------------------------------------------------------------------
+def fetch_flood() -> list:
+    """
+    Fetch water level data from thaiwater.net (HII - Hydro-Informatics Institute).
+    Filters to stations with elevated or critical water levels.
+    situation_level: 1=very low, 2=low, 3=normal, 4=above normal, 5=critical/overflowing
+    """
+    try:
+        with _client() as c:
+            resp = c.get(
+                "https://api-v3.thaiwater.net/api/v1/thaiwater30/public/waterlevel_load",
+                timeout=20.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+        waterlevel_data = data.get("waterlevel_data", {}).get("data", [])
+        result = []
+
+        for stn in waterlevel_data:
+            try:
+                situation = stn.get("situation_level", 3)
+                # Only include above-normal and critical stations
+                if situation < 4:
+                    continue
+
+                station = stn.get("station", {})
+                geocode = stn.get("geocode", {})
+                lat = station.get("tele_station_lat")
+                lon = station.get("tele_station_long")
+                if not lat or not lon:
+                    continue
+
+                result.append({
+                    "lat": float(lat),
+                    "lon": float(lon),
+                    "name": station.get("tele_station_name", {}).get("en", ""),
+                    "name_th": station.get("tele_station_name", {}).get("th", ""),
+                    "province": geocode.get("province_name", {}).get("en", ""),
+                    "province_th": geocode.get("province_name", {}).get("th", ""),
+                    "basin": stn.get("basin", {}).get("basin_name", {}).get("en", ""),
+                    "water_level_msl": stn.get("waterlevel_msl"),
+                    "situation_level": situation,
+                    "bank_diff": stn.get("diff_wl_bank"),
+                    "datetime": stn.get("waterlevel_datetime", ""),
+                    "critical": situation >= 5,
+                })
+            except (ValueError, TypeError, KeyError):
+                continue
+
+        return result
+    except Exception as e:
+        logger.error(f"Flood data fetch error: {e}")
+        return latest_data.get("flood", [])
+
+
+# ---------------------------------------------------------------------------
 # Scheduler: two-tier fetch pipeline
 # ---------------------------------------------------------------------------
 def run_fast_tier():
@@ -470,6 +515,7 @@ def run_slow_tier():
         "news": fetch_news,
         "air_quality": fetch_air_quality,
         "ships": fetch_ships,
+        "flood": fetch_flood,
     }
 
     results = {}
@@ -517,9 +563,10 @@ def get_slow_data() -> dict:
             "news": latest_data.get("news", []),
             "air_quality": latest_data.get("air_quality", []),
             "ships": latest_data.get("ships", []),
+            "flood": latest_data.get("flood", []),
             "updated": {
                 k: _last_updated.get(k, "")
-                for k in ["earthquakes", "fires", "weather", "news", "air_quality", "ships"]
+                for k in ["earthquakes", "fires", "weather", "news", "air_quality", "ships", "flood"]
             },
         }
 
@@ -544,6 +591,7 @@ def get_health() -> dict:
                 "news": len(latest_data.get("news", [])),
                 "cctv": len(latest_data.get("cctv", [])),
                 "air_quality": len(latest_data.get("air_quality", [])),
+                "flood": len(latest_data.get("flood", [])),
             },
             "last_updated": dict(_last_updated),
         }

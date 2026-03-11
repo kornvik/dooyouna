@@ -45,6 +45,46 @@ body {
   display: none !important;
 }
 
+.maplibregl-popup {
+  max-width: 320px !important;
+  z-index: 50 !important;
+}
+
+.maplibregl-popup-content {
+  background: rgba(10, 14, 23, 0.95) !important;
+  border: 1px solid rgba(0, 255, 136, 0.2) !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
+  padding: 8px 10px !important;
+  color: #e0e7ef !important;
+  font-size: 11px !important;
+  max-width: 300px !important;
+  overflow: hidden !important;
+}
+
+.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: rgba(10, 14, 23, 0.95) !important;
+}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: rgba(10, 14, 23, 0.95) !important;
+}
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: rgba(10, 14, 23, 0.95) !important;
+}
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: rgba(10, 14, 23, 0.95) !important;
+}
+
+.maplibregl-popup-close-button {
+  color: #8892a4 !important;
+  font-size: 16px !important;
+  padding: 2px 6px !important;
+}
+.maplibregl-popup-close-button:hover {
+  color: #00ff88 !important;
+  background: transparent !important;
+}
+
 /* HUD panel base */
 .hud-panel {
   background: var(--bg-panel);

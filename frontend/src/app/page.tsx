@@ -4,9 +4,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import LayerPanel from "@/components/LayerPanel";
 import NewsFeed from "@/components/NewsFeed";
+import ThreatIndex from "@/components/ThreatIndex";
 import { fetchFastData, fetchSlowData } from "@/lib/api";
 import type { FastData, LayerName, SlowData } from "@/types";
-import { Radio } from "lucide-react";
 
 // Dynamic import to avoid SSR issues with MapLibre
 const MapViewer = dynamic(() => import("@/components/MapViewer"), {
@@ -25,6 +25,7 @@ const DEFAULT_LAYERS: LayerName[] = [
   "military",
   "fires",
   "airQuality",
+  "flood",
   "news",
 ];
 
@@ -185,19 +186,10 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Bottom left: air quality alert */}
-      {slowData?.air_quality && slowData.air_quality.some((a) => a.pm25 > 75) && (
-        <div className="absolute bottom-8 left-3 z-20 hud-panel px-3 py-2 max-w-xs">
-          <div className="flex items-center gap-2">
-            <Radio size={12} className="text-[var(--danger)]" />
-            <span className="text-[10px] text-[var(--danger)]">
-              PM2.5 ALERT:{" "}
-              {slowData.air_quality.filter((a) => a.pm25 > 75).length} stations
-              above 75 µg/m³
-            </span>
-          </div>
-        </div>
-      )}
+      {/* Bottom left: threat index */}
+      <div className="absolute bottom-4 left-3 z-20">
+        <ThreatIndex fastData={fastData} slowData={slowData} />
+      </div>
     </div>
   );
 }

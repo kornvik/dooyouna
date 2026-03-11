@@ -1,5 +1,5 @@
 """
-SeaWatch: Thailand/Cambodia OSINT Dashboard - Backend API
+DooYouNa: Thailand/Cambodia OSINT Dashboard - Backend API
 """
 
 import logging
@@ -7,6 +7,9 @@ import threading
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.background import BackgroundScheduler
+from dotenv import load_dotenv
+
+load_dotenv()
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
@@ -19,6 +22,7 @@ from services.data_fetcher import (
     run_fast_tier,
     run_slow_tier,
 )
+from services.ais_stream import start_ais_stream, stop_ais_stream
 from services.region_dossier import get_dossier
 
 logging.basicConfig(level=logging.INFO)
@@ -39,6 +43,9 @@ async def lifespan(app: FastAPI):
 
     threading.Thread(target=_initial_fetch, daemon=True).start()
 
+    # Start AIS vessel stream
+    start_ais_stream()
+
     scheduler.add_job(run_fast_tier, "interval", seconds=60, id="fast_tier")
     scheduler.add_job(run_slow_tier, "interval", minutes=30, id="slow_tier")
     scheduler.start()
@@ -47,6 +54,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Shutdown
+    stop_ais_stream()
     scheduler.shutdown(wait=False)
     logger.info("Scheduler stopped")
 

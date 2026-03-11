@@ -6,3 +6,4 @@ apscheduler==3.10.4
 beautifulsoup4==4.12.3
 cachetools==5.5.1
 python-dotenv==1.0.1
+websockets==14.2

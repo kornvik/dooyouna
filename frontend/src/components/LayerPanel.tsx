@@ -12,6 +12,7 @@ import {
   Activity,
   Shield,
   Briefcase,
+  Droplets,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -164,6 +165,15 @@ export default function LayerPanel({
           count={slowData?.air_quality?.length}
           active={activeLayers.has("airQuality")}
           color="#cc00ff"
+          onToggle={onToggle}
+        />
+        <LayerItem
+          name="flood"
+          label="Flood / Water Level"
+          icon={<Droplets size={13} />}
+          count={slowData?.flood?.length}
+          active={activeLayers.has("flood")}
+          color="#4488ff"
           onToggle={onToggle}
         />
         <LayerItem
