@@ -38,7 +38,9 @@ async function getExisting(date: string, source: string): Promise<Row | null> {
  * For AQ/earthquake/flood, stores latest value.
  */
 export async function POST(request: Request) {
-  const token = request.headers.get("x-cron-key");
+  // Support both: cron-job.org (x-cron-key) and Vercel cron (Authorization: Bearer)
+  const token = request.headers.get("x-cron-key")
+    ?? request.headers.get("authorization")?.replace("Bearer ", "");
   if (!token || token !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
