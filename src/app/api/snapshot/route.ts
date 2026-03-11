@@ -38,9 +38,8 @@ async function getExisting(date: string, source: string): Promise<Row | null> {
  * For AQ/earthquake/flood, stores latest value.
  */
 export async function POST(request: Request) {
-  const token = new URL(request.url).searchParams.get("key")
-    ?? request.headers.get("x-cron-key");
-  if (token !== process.env.CRON_SECRET) {
+  const token = request.headers.get("x-cron-key");
+  if (!token || token !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const today = new Date().toISOString().slice(0, 10);
