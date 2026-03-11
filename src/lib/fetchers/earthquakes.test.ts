@@ -199,7 +199,7 @@ describe("fetchEarthquakes", () => {
     await fetchEarthquakes();
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    const options = mockFetch.mock.calls[0][1] as RequestInit;
+    const options = (mockFetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit;
     expect(options.headers).toEqual(
       expect.objectContaining({ "User-Agent": "DooYouNa-OSINT/1.0" }),
     );
@@ -211,7 +211,7 @@ describe("fetchEarthquakes", () => {
 
     await fetchEarthquakes();
 
-    const options = mockFetch.mock.calls[0][1] as RequestInit;
+    const options = (mockFetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1] as RequestInit;
     expect(options.signal).toBeInstanceOf(AbortSignal);
   });
 });

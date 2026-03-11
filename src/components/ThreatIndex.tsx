@@ -44,7 +44,7 @@ function signalColor(score: number): string {
 
 function LoadingPanel({ title }: { title: string }) {
   return (
-    <div className="hud-panel w-56">
+    <div className="hud-panel min-w-[200px] w-56">
       <div
         className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-between"
         style={{ background: "rgba(255,255,255,0.03)" }}
@@ -71,7 +71,7 @@ function LoadingPanel({ title }: { title: string }) {
 
 function ThreatPanel({ title, signals, totalScore, level }: PanelData) {
   return (
-    <div className="hud-panel w-56">
+    <div className="hud-panel min-w-[200px] w-56">
       {/* Header with threat level */}
       <div
         className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-between"

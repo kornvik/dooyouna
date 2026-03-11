@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Info, Layers, Newspaper } from "lucide-react";
 import LayerPanel from "@/components/LayerPanel";
 import NewsFeed from "@/components/NewsFeed";
 import ThreatIndex from "@/components/ThreatIndex";
 import EconomicPanel from "@/components/EconomicPanel";
+import ProvinceDossier from "@/components/ProvinceDossier";
 import { fetchSource } from "@/lib/api";
-import type { FastData, LayerName, SlowData } from "@/types";
+import type { FastData, LayerName, ProvinceProperties, SlowData } from "@/types";
 
 const EMPTY_SLOW: SlowData = {
   earthquakes: [],
@@ -38,11 +39,10 @@ const MapViewer = dynamic(() => import("@/components/MapViewer"), {
 const DEFAULT_LAYERS: LayerName[] = [
   "domestic",
   "international",
-  "military",
   "fires",
   "airQuality",
-  "flood",
   "news",
+  "wind",
 ];
 
 export default function HomePage() {
@@ -55,6 +55,9 @@ export default function HomePage() {
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "live" | "error"
   >("connecting");
+  const [mobilePanel, setMobilePanel] = useState<null | "layers" | "news">(null);
+  const [selectedProvince, setSelectedProvince] = useState<ProvinceProperties | null>(null);
+  const [showDisclaimer, setShowDisclaimer] = useState(true);
 
   // Toggle layer
   const handleToggle = useCallback((layer: LayerName) => {
@@ -115,10 +118,10 @@ export default function HomePage() {
     };
   }, []);
 
-  // Count totals
-  const militaryCount =
-    (fastData?.flights?.military?.length || 0) +
-    (fastData?.military_flights?.length || 0);
+  // Count totals (kept for backend/dossier use)
+  // const militaryCount =
+  //   (fastData?.flights?.military?.length || 0) +
+  //   (fastData?.military_flights?.length || 0);
 
   return (
     <div className="w-screen h-screen relative overflow-hidden">
@@ -127,10 +130,21 @@ export default function HomePage() {
         fastData={fastData}
         slowData={slowData}
         activeLayers={activeLayers}
+        onProvinceSelect={setSelectedProvince}
       />
 
       {/* CRT Scanlines */}
       <div className="scanlines" />
+
+      {/* Province Dossier */}
+      {selectedProvince && (
+        <ProvinceDossier
+          provinceProperties={selectedProvince}
+          fastData={fastData}
+          slowData={slowData}
+          onClose={() => setSelectedProvince(null)}
+        />
+      )}
 
       {/* Top header bar */}
       <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-2">
@@ -138,16 +152,22 @@ export default function HomePage() {
           <div className="text-[var(--accent)] font-bold text-sm tracking-[0.2em] glow-text">
             DOOYOUNA
           </div>
-          <div className="text-[10px] text-[var(--text-secondary)] tracking-wider">
+          <div className="hidden sm:block text-[10px] text-[var(--text-secondary)] tracking-wider">
             ข่าวกรองประเทศไทย
           </div>
           <Link
             href="/trends"
-            className="flex items-center gap-1 text-[10px] text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors ml-2 border border-[var(--border-color)] rounded px-2 py-0.5"
+            className="hidden sm:flex items-center gap-1 text-[10px] text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors ml-2 border border-[var(--border-color)] rounded px-2 py-0.5"
           >
             <BarChart3 size={10} />
             แนวโน้ม
           </Link>
+          <button
+            onClick={() => setShowDisclaimer(true)}
+            className="ml-1 text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors"
+          >
+            <Info size={12} />
+          </button>
         </div>
 
         <div className="flex items-center gap-4 text-[10px]">
@@ -167,12 +187,12 @@ export default function HomePage() {
             </span>
           </div>
 
-          {/* Stats */}
-          <div className="flex items-center gap-3 text-[var(--text-secondary)]">
+          {/* Stats — desktop only */}
+          <div className="hidden sm:flex items-center gap-3 text-[var(--text-secondary)]">
             <span>
               <span className="text-[#00ff88]">{fastData?.flights?.domestic?.length || 0}</span> ใน /{" "}
-              <span className="text-[#00d4ff]">{fastData?.flights?.international?.length || 0}</span> นอก /{" "}
-              <span className="text-[#ffdd00]">{militaryCount}</span> ทหาร
+              <span className="text-[#00d4ff]">{fastData?.flights?.international?.length || 0}</span> นอก
+              {/* <span className="text-[#ffdd00]">{militaryCount}</span> ทหาร */}
             </span>
             <span>
               <span className="text-[#ff4400]">
@@ -188,13 +208,60 @@ export default function HomePage() {
             </span>
           </div>
 
-          {/* UTC time */}
+          {/* Clock */}
           <DualClock />
         </div>
       </div>
 
-      {/* Left panel: Layer toggles */}
-      <div className="absolute top-12 left-3 z-20">
+      {/* Mobile floating toggle buttons */}
+      <button
+        className="sm:hidden fixed top-12 left-3 z-20 hud-panel p-2.5 cursor-pointer"
+        onClick={() => setMobilePanel(mobilePanel === "layers" ? null : "layers")}
+        aria-label="Toggle layers"
+      >
+        <Layers size={18} className="text-[var(--accent)]" />
+      </button>
+      <button
+        className="sm:hidden fixed top-12 right-3 z-20 hud-panel p-2.5 cursor-pointer"
+        onClick={() => setMobilePanel(mobilePanel === "news" ? null : "news")}
+        aria-label="Toggle news"
+      >
+        <Newspaper size={18} className="text-[var(--accent)]" />
+      </button>
+
+      {/* Mobile drawer: Layers */}
+      {mobilePanel === "layers" && (
+        <>
+          <div className="mobile-backdrop sm:hidden" onClick={() => setMobilePanel(null)} />
+          <div className="mobile-drawer mobile-drawer-left sm:hidden pt-12 px-3">
+            <LayerPanel
+              activeLayers={activeLayers}
+              onToggle={handleToggle}
+              fastData={fastData}
+              slowData={slowData}
+              slowLoaded={slowLoaded}
+              onClose={() => setMobilePanel(null)}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Mobile drawer: News */}
+      {mobilePanel === "news" && (
+        <>
+          <div className="mobile-backdrop sm:hidden" onClick={() => setMobilePanel(null)} />
+          <div className="mobile-drawer mobile-drawer-right sm:hidden pt-12 px-3">
+            <NewsFeed
+              articles={slowData?.news || []}
+              visible={activeLayers.has("news")}
+              onClose={() => setMobilePanel(null)}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Desktop: Left panel — Layer toggles */}
+      <div className="hidden sm:block absolute top-12 left-3 z-20">
         <LayerPanel
           activeLayers={activeLayers}
           onToggle={handleToggle}
@@ -204,24 +271,51 @@ export default function HomePage() {
         />
       </div>
 
-      {/* Right panel: News feed */}
-      <div className="absolute top-12 right-3 z-20">
+      {/* Desktop: Right panel — News feed */}
+      <div className="hidden sm:block absolute top-12 right-3 z-20">
         <NewsFeed
           articles={slowData?.news || []}
           visible={activeLayers.has("news")}
         />
       </div>
 
-      {/* Bottom right: security index + economic panel */}
-      <div className="absolute bottom-4 right-3 z-20 flex flex-col gap-2">
-        <ThreatIndex fastData={fastData} slowData={slowData} panel="security" />
+      {/* Desktop: Bottom right — economic panel */}
+      <div className="hidden sm:flex absolute bottom-4 right-3 z-20 flex-col gap-2">
+        {/* <ThreatIndex fastData={fastData} slowData={slowData} panel="security" /> */}
         <EconomicPanel />
       </div>
 
-      {/* Bottom left: natural disaster index */}
-      <div className="absolute bottom-4 left-3 z-20">
+      {/* Desktop: Bottom left — natural disaster index */}
+      <div className="hidden sm:block absolute bottom-4 left-3 z-20">
         <ThreatIndex fastData={fastData} slowData={slowData} panel="natural" />
       </div>
+
+      {/* Mobile: Bottom horizontal scroll strip */}
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-20 overflow-x-auto pb-3 px-3">
+        <div className="flex gap-2 w-max">
+          <ThreatIndex fastData={fastData} slowData={slowData} panel="natural" />
+          {/* <ThreatIndex fastData={fastData} slowData={slowData} panel="security" /> */}
+          <EconomicPanel />
+        </div>
+      </div>
+
+      {/* Disclaimer popup */}
+      {showDisclaimer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="hud-panel max-w-sm mx-4 p-5 text-center">
+            <Info size={20} className="text-[var(--accent)] mx-auto mb-3" />
+            <p className="text-[11px] leading-relaxed text-[var(--text-secondary)] mb-4">
+              ข้อมูลรวบรวมจากแหล่งเปิดสาธารณะ อาจไม่ครบถ้วนหรือมีความคลาดเคลื่อน ไม่ควรใช้เป็นข้อมูลอ้างอิงหลัก
+            </p>
+            <button
+              onClick={() => setShowDisclaimer(false)}
+              className="text-[10px] tracking-wider px-4 py-1.5 border border-[var(--accent)] text-[var(--accent)] rounded hover:bg-[var(--accent)] hover:text-black transition-colors"
+            >
+              รับทราบ
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

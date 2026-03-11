@@ -273,7 +273,7 @@ describe("fetchFlights", () => {
     await fetchFlights();
 
     expect(mockFetch).toHaveBeenCalledTimes(2);
-    for (const call of mockFetch.mock.calls) {
+    for (const call of (mockFetch as unknown as ReturnType<typeof vi.fn>).mock.calls) {
       const options = call[1] as RequestInit;
       expect(options.headers).toEqual(
         expect.objectContaining({ "User-Agent": "DooYouNa-OSINT/1.0" }),

@@ -195,8 +195,8 @@ export default function LayerPanel({
           onToggle={onToggle}
         />
 
-        {/* Security */}
-        <div className="px-2 pt-3 pb-1 text-[9px] tracking-wider text-[var(--text-secondary)] uppercase">
+        {/* Security — military flights hidden from UI but code retained */}
+        {/* <div className="px-2 pt-3 pb-1 text-[9px] tracking-wider text-[var(--text-secondary)] uppercase">
           ความมั่นคง
         </div>
         <LayerItem
@@ -213,7 +213,7 @@ export default function LayerPanel({
           source="ADS-B Exchange / MILMOD DB"
           refreshInfo="~1 นาที"
           onToggle={onToggle}
-        />
+        /> */}
         <LayerItem
           name="ships"
           label="เรือ"

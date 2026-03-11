@@ -167,3 +167,48 @@ export type LayerName =
   | "floodSatellite"
   | "nightLights"
   | "wind";
+
+// Province Intel Dossier types
+export interface ProvinceProperties {
+  name_th: string;
+  name_en: string;
+  code: string; // ISO 3166-2 e.g. "TH-10"
+  region: string; // Thai region name
+  region_en: string;
+  population: number;
+  area_km2: number;
+  capital_th: string;
+  capital_en: string;
+  bbox: string; // JSON "[minLon, minLat, maxLon, maxLat]"
+  geometry?: number[][][] | number[][][][]; // Polygon or MultiPolygon coordinates
+}
+
+export interface ProvinceThreatSummary {
+  fireCount: number;
+  floodStations: FloodStation[];
+  criticalFloods: number;
+  normalFloods: number;
+  aqStations: AirQuality[];
+  avgPm25: number;
+  earthquakes: Earthquake[];
+  maxMagnitude: number;
+  flightCount: number;
+  militaryCount: number;
+  shipCount: number;
+  matchingNews: NewsArticle[];
+}
+
+export interface ProvinceThreatScore {
+  fire: number;
+  flood: number;
+  airQuality: number;
+  seismic: number;
+  composite: number;
+  level: { name: string; min: number; color: string; bg: string };
+}
+
+export interface ProvinceDossierData {
+  properties: ProvinceProperties;
+  threats: ProvinceThreatSummary;
+  score: ProvinceThreatScore;
+}

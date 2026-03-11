@@ -3,8 +3,6 @@ import type { Ship } from "@/types";
 
 const AIS_WS_URL = "wss://stream.aisstream.io/v0/stream";
 const COLLECTION_TIMEOUT_MS = 12_000; // collect data for 12 seconds
-const AIS_API_KEY = process.env.AIS_API_KEY || "";
-
 // SE Asia bounding boxes
 const BOUNDING_BOXES = [
   [[5.0, 95.0], [20.5, 107.7]], // Thailand + Cambodia + Vietnam
@@ -40,7 +38,8 @@ function midToCountry(mmsi: string): string {
 }
 
 export async function fetchShips(): Promise<Ship[]> {
-  if (!AIS_API_KEY) {
+  const apiKey = process.env.AIS_API_KEY || "";
+  if (!apiKey) {
     console.error("AIS_API_KEY not set, skipping ship fetch");
     return [];
   }
@@ -71,7 +70,7 @@ export async function fetchShips(): Promise<Ship[]> {
 
     ws.on("open", () => {
       const subscription = {
-        APIKey: AIS_API_KEY,
+        APIKey: apiKey,
         BoundingBoxes: BOUNDING_BOXES,
         FilterMessageTypes: ["PositionReport", "ShipStaticData"],
       };

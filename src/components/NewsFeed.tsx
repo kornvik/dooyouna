@@ -7,6 +7,7 @@ import { ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 interface NewsFeedProps {
   articles: NewsArticle[];
   visible: boolean;
+  onClose?: () => void;
 }
 
 function timeAgo(dateStr: string): string {
@@ -32,13 +33,13 @@ function weightToColor(weight: number): string {
   return "var(--text-secondary)";
 }
 
-export default function NewsFeed({ articles, visible }: NewsFeedProps) {
+export default function NewsFeed({ articles, visible, onClose }: NewsFeedProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   if (!visible) return null;
 
   return (
-    <div className="hud-panel w-72 flex flex-col max-h-[50vh]">
+    <div className="hud-panel w-[calc(100vw-3rem)] sm:w-72 flex flex-col max-h-[80vh] sm:max-h-[50vh]">
       <button
         onClick={() => setCollapsed((c) => !c)}
         className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-between w-full text-left hover:bg-[rgba(0,255,136,0.03)] transition-colors cursor-pointer"
@@ -49,7 +50,20 @@ export default function NewsFeed({ articles, visible }: NewsFeedProps) {
             <span className="text-[var(--text-secondary)] ml-2">{articles.length}</span>
           )}
         </div>
-        {collapsed ? <ChevronDown size={12} className="text-[var(--text-secondary)]" /> : <ChevronUp size={12} className="text-[var(--text-secondary)]" />}
+        <div className="flex items-center gap-2">
+          {collapsed ? <ChevronDown size={12} className="text-[var(--text-secondary)]" /> : <ChevronUp size={12} className="text-[var(--text-secondary)]" />}
+          {onClose && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onClose(); } }}
+              className="text-[var(--text-secondary)] hover:text-[var(--accent)] text-sm leading-none cursor-pointer"
+            >
+              ✕
+            </span>
+          )}
+        </div>
       </button>
 
       {!collapsed && <div className="overflow-y-auto p-2 flex flex-col gap-1.5">
