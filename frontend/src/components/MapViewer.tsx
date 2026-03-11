@@ -15,13 +15,50 @@ interface MapViewerProps {
 const DEFAULT_CENTER: [number, number] = [102.5, 13.5];
 const DEFAULT_ZOOM = 5.5;
 
-// SVG plane icon as data URL (pointing up/north)
-function createPlaneIcon(color: string): string {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-    <path d="M12 2 L14 8 L20 10 L14 12 L14 18 L12 16 L10 18 L10 12 L4 10 L10 8 Z"
-          fill="${color}" stroke="rgba(0,0,0,0.5)" stroke-width="0.5"/>
-  </svg>`;
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+// Render a plane icon to ImageData via canvas (MapLibre needs raw pixel data)
+function createPlaneImageData(
+  color: string,
+  size = 32
+): { width: number; height: number; data: Uint8ClampedArray } {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  // Draw plane shape (pointing up)
+  const s = size;
+  ctx.fillStyle = color;
+  ctx.strokeStyle = "rgba(0,0,0,0.6)";
+  ctx.lineWidth = 1;
+
+  ctx.beginPath();
+  // Fuselage
+  ctx.moveTo(s * 0.5, s * 0.08); // nose
+  ctx.lineTo(s * 0.56, s * 0.35);
+  // Right wing
+  ctx.lineTo(s * 0.88, s * 0.45);
+  ctx.lineTo(s * 0.56, s * 0.52);
+  // Right tail
+  ctx.lineTo(s * 0.56, s * 0.72);
+  ctx.lineTo(s * 0.7, s * 0.85);
+  ctx.lineTo(s * 0.56, s * 0.8);
+  // Bottom center
+  ctx.lineTo(s * 0.5, s * 0.88);
+  // Left tail (mirror)
+  ctx.lineTo(s * 0.44, s * 0.8);
+  ctx.lineTo(s * 0.3, s * 0.85);
+  ctx.lineTo(s * 0.44, s * 0.72);
+  // Left wing
+  ctx.lineTo(s * 0.44, s * 0.52);
+  ctx.lineTo(s * 0.12, s * 0.45);
+  ctx.lineTo(s * 0.44, s * 0.35);
+  ctx.closePath();
+
+  ctx.fill();
+  ctx.stroke();
+
+  const imageData = ctx.getImageData(0, 0, size, size);
+  return { width: size, height: size, data: imageData.data };
 }
 
 export default function MapViewer({
@@ -116,24 +153,22 @@ export default function MapViewer({
     });
 
     map.on("load", () => {
-      // Load plane icon images
+      // Create plane icons via canvas (raster ImageData)
       const icons: [string, string][] = [
-        ["plane-commercial", createPlaneIcon("#00d4ff")],
-        ["plane-military", createPlaneIcon("#ffdd00")],
-        ["plane-private", createPlaneIcon("#ff8800")],
+        ["plane-commercial", "#00d4ff"],
+        ["plane-military", "#ffdd00"],
+        ["plane-private", "#ff8800"],
       ];
 
-      let iconsLoaded = 0;
-      icons.forEach(([name, url]) => {
-        map.loadImage(url).then(({ data }) => {
-          if (!map.hasImage(name)) map.addImage(name, data, { sdf: false });
-          iconsLoaded++;
-          if (iconsLoaded === icons.length) {
-            setupLayers(map);
-            mapLoadedRef.current = true;
-          }
-        });
-      });
+      for (const [name, color] of icons) {
+        const imgData = createPlaneImageData(color, 32);
+        if (!map.hasImage(name)) {
+          map.addImage(name, imgData, { sdf: false });
+        }
+      }
+
+      setupLayers(map);
+      mapLoadedRef.current = true;
     });
 
     mapRef.current = map;
