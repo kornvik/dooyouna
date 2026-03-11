@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { FastData, LayerName, SlowData } from "@/types";
-import { fetchRegionDossier } from "@/lib/api";
+import type { FastData, LayerName, ProvinceProperties, SlowData } from "@/types";
 import {
   POPUP_CONFIG,
   formatFlight, formatDomestic, formatMilitary, formatPrivate,
@@ -12,11 +11,14 @@ import {
   formatFlood,
 } from "@/lib/popupFormatters";
 import { getVipLabel } from "@/lib/vipWatchlist";
+import { setupProvinceLayers } from "@/lib/provinceLayers";
+import { createWindParticleRenderer, type WindParticleRenderer } from "@/lib/windParticles";
 
 interface MapViewerProps {
   fastData: FastData | null;
   slowData: SlowData | null;
   activeLayers: Set<LayerName>;
+  onProvinceSelect?: (properties: ProvinceProperties | null) => void;
 }
 
 const DEFAULT_CENTER: [number, number] = [102.5, 13.5];
@@ -208,37 +210,6 @@ function createAQCloudIcon(level: "good" | "moderate" | "bad" | "hazardous", siz
   return { width: size, height: size, data: imageData.data };
 }
 
-// Wind arrow icon
-function createWindArrowIcon(size = 32): { width: number; height: number; data: Uint8ClampedArray } {
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-  const s = size;
-
-  ctx.strokeStyle = "#aabbcc";
-  ctx.fillStyle = "#aabbcc";
-  ctx.lineWidth = 2;
-  ctx.lineCap = "round";
-
-  // Arrow shaft (points up = 0°, will be rotated by wind direction)
-  ctx.beginPath();
-  ctx.moveTo(s * 0.5, s * 0.15);
-  ctx.lineTo(s * 0.5, s * 0.85);
-  ctx.stroke();
-
-  // Arrowhead
-  ctx.beginPath();
-  ctx.moveTo(s * 0.5, s * 0.15);
-  ctx.lineTo(s * 0.35, s * 0.35);
-  ctx.moveTo(s * 0.5, s * 0.15);
-  ctx.lineTo(s * 0.65, s * 0.35);
-  ctx.stroke();
-
-  const imageData = ctx.getImageData(0, 0, size, size);
-  return { width: size, height: size, data: imageData.data };
-}
-
 // -----------------------------------------------------------------------
 // Satellite flood tile pixel filter:
 // Fetches GIBS MODIS tiles, strips out brown/grey land via saturation,
@@ -268,13 +239,15 @@ function registerFloodProtocol() {
       const mn = Math.min(r, g, b);
       const sat = mx === 0 ? 0 : (mx - mn) / mx;
       const bright = mx / 255;
-      // Keep only clearly colored pixels (high saturation = water/flood)
       // Low saturation = grey/brown land/clouds → hide
+      // Blue-dominant = permanent water bodies → hide
+      // Keep only red/yellow/orange flood indicators
       if (sat < 0.25 || bright < 0.12) {
         d[i + 3] = 0;
+      } else if (b > r * 1.2 && b > g) {
+        d[i + 3] = 0;
       } else {
-        // Boost flood colors (red/yellow) to full opacity, water slightly less
-        d[i + 3] = r > 150 ? 220 : 160;
+        d[i + 3] = 220;
       }
     }
 
@@ -288,11 +261,13 @@ export default function MapViewer({
   fastData,
   slowData,
   activeLayers,
+  onProvinceSelect,
 }: MapViewerProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
-  const popupRef = useRef<maplibregl.Popup | null>(null);
   const mapLoadedRef = useRef(false);
+  const windCanvasRef = useRef<HTMLCanvasElement>(null);
+  const windRendererRef = useRef<WindParticleRenderer | null>(null);
   const [cursorPos, setCursorPos] = useState({ lat: 0, lng: 0 });
 
   // Initialize map
@@ -342,42 +317,9 @@ export default function MapViewer({
       setCursorPos({ lat: e.lngLat.lat, lng: e.lngLat.lng });
     });
 
-    // Right-click: region dossier
-    map.on("contextmenu", async (e) => {
+    // Right-click: prevent default context menu
+    map.on("contextmenu", (e) => {
       e.preventDefault();
-      const { lat, lng } = e.lngLat;
-      if (popupRef.current) popupRef.current.remove();
-
-      const popup = new maplibregl.Popup({ maxWidth: "360px" })
-        .setLngLat([lng, lat])
-        .setHTML(
-          '<div style="color:#e0e7ef;font-family:monospace;font-size:11px;padding:4px;">กำลังโหลดข้อมูล...</div>'
-        )
-        .addTo(map);
-      popupRef.current = popup;
-
-      try {
-        const data = await fetchRegionDossier(lat, lng);
-        const country = data.country || {};
-        popup.setHTML(`
-          <div style="color:#e0e7ef;font-family:monospace;font-size:11px;padding:4px;max-width:340px;">
-            <div style="color:#00ff88;font-weight:bold;font-size:13px;margin-bottom:6px;">
-              ${data.location || `${lat.toFixed(4)}, ${lng.toFixed(4)}`}
-            </div>
-            ${data.country_code ? `<div><b>Country:</b> ${data.country} (${data.country_code})</div>` : ""}
-            ${data.city ? `<div><b>City:</b> ${data.city}</div>` : ""}
-            ${country.population ? `<div><b>Population:</b> ${Number(country.population).toLocaleString()}</div>` : ""}
-            ${country.capital?.length ? `<div><b>Capital:</b> ${country.capital.join(", ")}</div>` : ""}
-            ${country.languages ? `<div><b>Languages:</b> ${Object.values(country.languages).join(", ")}</div>` : ""}
-            ${country.currencies ? `<div><b>Currency:</b> ${Object.values(country.currencies).join(", ")}</div>` : ""}
-            ${data.wikipedia?.extract ? `<div style="margin-top:6px;color:#8892a4;font-size:10px;">${data.wikipedia.extract.slice(0, 200)}...</div>` : ""}
-          </div>
-        `);
-      } catch {
-        popup.setHTML(
-          '<div style="color:#ff4444;font-family:monospace;font-size:11px;">โหลดข้อมูลล้มเหลว</div>'
-        );
-      }
     });
 
     map.on("load", () => {
@@ -405,9 +347,6 @@ export default function MapViewer({
         const name = `aq-${level}`;
         if (!map.hasImage(name)) map.addImage(name, createAQCloudIcon(level, 32), { sdf: false });
       }
-
-      // Wind arrow icon
-      if (!map.hasImage("wind-arrow")) map.addImage("wind-arrow", createWindArrowIcon(32), { sdf: false });
 
       // Thailand border highlight (high-res from OSM)
       fetch("/geo/thailand.json")
@@ -447,13 +386,25 @@ export default function MapViewer({
         })
         .catch(() => { /* borders are optional */ });
 
+      // Province boundaries (click for dossier)
+      if (onProvinceSelect) {
+        setupProvinceLayers(map, onProvinceSelect);
+      }
+
       setupLayers(map);
       mapLoadedRef.current = true;
     });
 
     mapRef.current = map;
 
+    // Initialize wind particle renderer
+    if (windCanvasRef.current) {
+      windRendererRef.current = createWindParticleRenderer(windCanvasRef.current, map);
+    }
+
     return () => {
+      windRendererRef.current?.destroy();
+      windRendererRef.current = null;
       map.remove();
       mapRef.current = null;
       mapLoadedRef.current = false;
@@ -545,6 +496,22 @@ export default function MapViewer({
     }
   }, [activeLayers.has("floodSatellite")]);
 
+  // Wind particle animation
+  useEffect(() => {
+    const renderer = windRendererRef.current;
+    if (!renderer) return;
+
+    if (slowData?.wind) {
+      renderer.setWindData(slowData.wind);
+    }
+
+    if (activeLayers.has("wind") && slowData?.wind?.length) {
+      renderer.start();
+    } else {
+      renderer.stop();
+    }
+  }, [slowData?.wind, activeLayers.has("wind")]);
+
   // NASA VIIRS nighttime lights overlay (Black Marble + daily radiance)
   useEffect(() => {
     const map = mapRef.current;
@@ -584,6 +551,11 @@ export default function MapViewer({
   return (
     <div className="relative w-full h-full">
       <div ref={mapContainer} className="w-full h-full" />
+      <canvas
+        ref={windCanvasRef}
+        className="absolute inset-0 pointer-events-none"
+        style={{ zIndex: 1 }}
+      />
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 hud-panel px-3 py-1 text-[10px] text-[var(--text-secondary)] z-10">
         {cursorPos.lat.toFixed(4)}°N {cursorPos.lng.toFixed(4)}°E
       </div>
@@ -592,11 +564,7 @@ export default function MapViewer({
           <div className="text-[8px] tracking-wider text-[var(--text-secondary)] mb-1">ดาวเทียม MODIS 3 วัน</div>
           <div className="flex items-center gap-1.5">
             <span className="inline-block w-3 h-2 rounded-sm" style={{ background: "#ff3300" }} />
-            <span style={{ color: "var(--text-secondary)" }}>น้ำท่วมล่าสุด</span>
-          </div>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            <span className="inline-block w-3 h-2 rounded-sm" style={{ background: "#3366ff" }} />
-            <span style={{ color: "var(--text-secondary)" }}>แหล่งน้ำ</span>
+            <span style={{ color: "var(--text-secondary)" }}>พื้นที่น้ำท่วม</span>
           </div>
         </div>
       )}
@@ -616,7 +584,6 @@ function setupLayers(map: maplibregl.Map) {
     "private-flights",
     "earthquakes",
     "ships-source",
-    "wind-source",
   ];
   for (const id of plainSources) {
     map.addSource(id, {
@@ -925,31 +892,6 @@ function setupLayers(map: maplibregl.Map) {
     },
   });
 
-  // --- Wind arrows ---
-  map.addLayer({
-    id: "wind-layer",
-    type: "symbol",
-    source: "wind-source",
-    layout: {
-      "icon-image": "wind-arrow",
-      "icon-size": 0.9,
-      // Wind direction is where wind comes FROM, arrow shows where it goes TO
-      "icon-rotate": ["get", "direction"],
-      "icon-rotation-alignment": "map",
-      "icon-allow-overlap": true,
-      "icon-ignore-placement": true,
-      "text-field": ["concat", ["to-string", ["round", ["get", "speed"]]], " km/h"],
-      "text-size": 9,
-      "text-offset": [0, 1.8],
-      "text-allow-overlap": true,
-    },
-    paint: {
-      "text-color": "#aabbcc",
-      "text-halo-color": "rgba(0,0,0,0.7)",
-      "text-halo-width": 1,
-    },
-  });
-
   // --- Cluster click-to-zoom ---
   for (const clusterId of ["fires-cluster", "air-quality-cluster", "flood-cluster"]) {
     const sourceId = clusterId === "fires-cluster" ? "fires"
@@ -1063,7 +1005,6 @@ function updateMapData(
     setSourceData("air-quality", toFeatures(slowData.air_quality || []));
     setSourceData("ships-source", toFeatures(slowData.ships || []));
     setSourceData("flood-source", toFeatures(slowData.flood || []));
-    setSourceData("wind-source", toFeatures(slowData.wind || []));
   }
 
   // Layer visibility
@@ -1079,7 +1020,7 @@ function updateMapData(
     news: [],
     airQuality: ["air-quality-cluster", "air-quality-layer"],
     flood: ["flood-layer", "flood-cluster"],
-    wind: ["wind-layer"],
+    wind: [], // managed by canvas particle renderer
     floodSatellite: [], // managed as raster in separate useEffect
     nightLights: [], // managed as raster in separate useEffect
   };

@@ -13,8 +13,7 @@ import {
 } from "../popupFormatters";
 
 describe("POPUP_CONFIG", () => {
-  it("has correct anchor and offset", () => {
-    expect(POPUP_CONFIG.anchor).toBe("bottom");
+  it("has correct offset and maxWidth", () => {
     expect(POPUP_CONFIG.offset).toBe(15);
     expect(POPUP_CONFIG.maxWidth).toBe("300px");
   });

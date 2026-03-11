@@ -143,28 +143,73 @@ body {
   background: rgba(0, 255, 136, 0.08);
 }
 
-/* Info tooltip for layer source */
-.info-tooltip-wrapper {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-.info-tooltip {
-  display: none;
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 6px);
-  white-space: nowrap;
+/* Info tooltip for layer source (fixed position to escape overflow) */
+.info-tooltip-fixed {
+  position: fixed;
+  transform: translateY(-50%);
+  white-space: pre-line;
   background: rgba(10, 14, 23, 0.96);
   border: 1px solid rgba(0, 255, 136, 0.2);
   color: var(--text-secondary);
   font-size: 9px;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 3px;
-  z-index: 100;
+  z-index: 200;
   pointer-events: none;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
-.info-tooltip-wrapper:hover .info-tooltip {
-  display: block;
+
+/* Mobile drawer overlay */
+.mobile-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 30;
+  transition: transform 0.25s ease-out;
+}
+.mobile-drawer-left {
+  left: 0;
+  transform: translateX(0);
+}
+.mobile-drawer-right {
+  right: 0;
+  transform: translateX(0);
+}
+
+/* Mobile backdrop */
+.mobile-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 25;
+}
+
+/* Province dossier slide-in animation */
+@keyframes slide-in-left {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+.province-dossier-enter {
+  animation: slide-in-left 0.25s ease-out;
+}
+
+/* Mobile-friendly touch targets */
+@media (max-width: 639px) {
+  .layer-toggle {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  .maplibregl-popup {
+    max-width: 260px !important;
+  }
+  .maplibregl-popup-content {
+    max-width: 240px !important;
+  }
 }

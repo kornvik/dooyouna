@@ -17,7 +17,7 @@ import {
   Sun,
   Cloud,
 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 interface LayerPanelProps {
@@ -26,6 +26,7 @@ interface LayerPanelProps {
   fastData: FastData | null;
   slowData: SlowData | null;
   slowLoaded: Set<string>;
+  onClose?: () => void;
 }
 
 interface LayerItemProps {
@@ -37,6 +38,7 @@ interface LayerItemProps {
   active: boolean;
   color: string;
   source: string;
+  refreshInfo?: string;
   onToggle: (name: LayerName) => void;
 }
 
@@ -49,8 +51,19 @@ function LayerItem({
   active,
   color,
   source,
+  refreshInfo,
   onToggle,
 }: LayerItemProps) {
+  const infoRef = useRef<HTMLSpanElement>(null);
+  const [tip, setTip] = useState<{ x: number; y: number } | null>(null);
+
+  const showTip = () => {
+    const el = infoRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setTip({ x: rect.right + 6, y: rect.top + rect.height / 2 });
+  };
+
   return (
     <button
       onClick={() => onToggle(name)}
@@ -79,10 +92,22 @@ function LayerItem({
           {count}
         </span>
       ) : null}
-      <span className="info-tooltip-wrapper flex-shrink-0">
+      <span
+        ref={infoRef}
+        className="flex-shrink-0 inline-flex items-center"
+        onMouseEnter={showTip}
+        onMouseLeave={() => setTip(null)}
+      >
         <Info size={9} style={{ color: "var(--text-secondary)" }} className="opacity-30" />
-        <span className="info-tooltip">{source}</span>
       </span>
+      {tip && (
+        <span
+          className="info-tooltip-fixed"
+          style={{ left: tip.x, top: tip.y }}
+        >
+          แหล่ง: {source}{refreshInfo ? `\nอัปเดตทุก: ${refreshInfo}` : ""}
+        </span>
+      )}
     </button>
   );
 }
@@ -93,12 +118,13 @@ export default function LayerPanel({
   fastData,
   slowData,
   slowLoaded,
+  onClose,
 }: LayerPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const flights = fastData?.flights;
 
   return (
-    <div className="hud-panel w-56 flex flex-col">
+    <div className="hud-panel w-[calc(100vw-3rem)] sm:w-56 flex flex-col max-h-[80vh] sm:max-h-none">
       {/* Header — click to collapse */}
       <button
         onClick={() => setCollapsed((c) => !c)}
@@ -107,11 +133,24 @@ export default function LayerPanel({
         <span className="text-[10px] tracking-widest text-[var(--accent)] glow-text">
           ชั้นข้อมูล
         </span>
-        <ChevronDown
-          size={12}
-          className="text-[var(--text-secondary)] transition-transform duration-200"
-          style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
-        />
+        <div className="flex items-center gap-2">
+          <ChevronDown
+            size={12}
+            className="text-[var(--text-secondary)] transition-transform duration-200"
+            style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
+          />
+          {onClose && (
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.stopPropagation(); onClose(); } }}
+              className="text-[var(--text-secondary)] hover:text-[var(--accent)] text-sm leading-none cursor-pointer"
+            >
+              ✕
+            </span>
+          )}
+        </div>
       </button>
 
       {!collapsed && <div className="p-1.5 flex flex-col gap-0.5 overflow-y-auto max-h-[70vh]">
@@ -128,6 +167,7 @@ export default function LayerPanel({
           active={activeLayers.has("domestic")}
           color="#00ff88"
           source="ADS-B Exchange / OpenSky"
+          refreshInfo="~1 นาที"
           onToggle={onToggle}
         />
         <LayerItem
@@ -139,6 +179,7 @@ export default function LayerPanel({
           active={activeLayers.has("international")}
           color="#00d4ff"
           source="ADS-B Exchange / OpenSky"
+          refreshInfo="~1 นาที"
           onToggle={onToggle}
         />
         <LayerItem
@@ -150,6 +191,7 @@ export default function LayerPanel({
           active={activeLayers.has("private")}
           color="#ff8800"
           source="ADS-B Exchange"
+          refreshInfo="~1 นาที"
           onToggle={onToggle}
         />
 
@@ -169,6 +211,7 @@ export default function LayerPanel({
           active={activeLayers.has("military")}
           color="#ffdd00"
           source="ADS-B Exchange / MILMOD DB"
+          refreshInfo="~1 นาที"
           onToggle={onToggle}
         />
         <LayerItem
@@ -180,6 +223,7 @@ export default function LayerPanel({
           active={activeLayers.has("ships")}
           color="#00ff88"
           source="AIS (MarineTraffic)"
+          refreshInfo="~30 นาที"
           onToggle={onToggle}
         />
 
@@ -196,6 +240,7 @@ export default function LayerPanel({
           active={activeLayers.has("earthquakes")}
           color="#ff4444"
           source="USGS Earthquake API"
+          refreshInfo="~30 นาที"
           onToggle={onToggle}
         />
         <LayerItem
@@ -207,6 +252,7 @@ export default function LayerPanel({
           active={activeLayers.has("fires")}
           color="#ff4400"
           source="NASA FIRMS (VIIRS/MODIS)"
+          refreshInfo="~30 นาที"
           onToggle={onToggle}
         />
         <LayerItem
@@ -218,6 +264,7 @@ export default function LayerPanel({
           active={activeLayers.has("flood")}
           color="#4488ff"
           source="สสน. (thaiwater.net)"
+          refreshInfo="~30 นาที"
           onToggle={onToggle}
         />
         <LayerItem
@@ -227,6 +274,7 @@ export default function LayerPanel({
           active={activeLayers.has("floodSatellite")}
           color="#0066ff"
           source="NASA GIBS (MODIS Flood 3-Day)"
+          refreshInfo="รายวัน"
           onToggle={onToggle}
         />
         <LayerItem
@@ -237,6 +285,7 @@ export default function LayerPanel({
           active={activeLayers.has("weather")}
           color="#4488ff"
           source="RainViewer API"
+          refreshInfo="~30 นาที"
           onToggle={onToggle}
         />
         <LayerItem
@@ -248,6 +297,7 @@ export default function LayerPanel({
           active={activeLayers.has("wind")}
           color="#aabbcc"
           source="Open-Meteo (free)"
+          refreshInfo="~30 นาที"
           onToggle={onToggle}
         />
         <LayerItem
@@ -259,6 +309,7 @@ export default function LayerPanel({
           active={activeLayers.has("airQuality")}
           color="#cc00ff"
           source="กรมควบคุมมลพิษ (air4thai)"
+          refreshInfo="~30 นาที"
           onToggle={onToggle}
         />
 
@@ -275,6 +326,7 @@ export default function LayerPanel({
           active={activeLayers.has("news")}
           color="#44aaff"
           source="Bangkok Post / Khmer Times / RSS"
+          refreshInfo="~30 นาที"
           onToggle={onToggle}
         />
 
@@ -289,6 +341,7 @@ export default function LayerPanel({
           active={activeLayers.has("nightLights")}
           color="#ffdd00"
           source="NASA VIIRS Day/Night Band (Daily)"
+          refreshInfo="รายวัน"
           onToggle={onToggle}
         />
       </div>}

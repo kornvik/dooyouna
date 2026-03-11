@@ -8,7 +8,6 @@ const POPUP_STYLE =
 
 export const POPUP_CONFIG = {
   maxWidth: "300px",
-  anchor: "bottom" as const,
   offset: 15,
 };
 
