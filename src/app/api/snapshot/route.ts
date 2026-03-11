@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase";
 import { fetchFlights, getFlightDirection } from "@/lib/fetchers/flights";
 import { fetchEarthquakes } from "@/lib/fetchers/earthquakes";
 import { fetchFires } from "@/lib/fetchers/fires";
@@ -19,7 +19,7 @@ type Row = {
  * Reads today's existing row for a source to merge accumulated data.
  */
 async function getExisting(date: string, source: string): Promise<Row | null> {
-  const { data } = await supabase
+  const { data } = await supabaseAdmin
     .from("daily_snapshots")
     .select("*")
     .eq("date", date)
@@ -223,7 +223,7 @@ export async function POST() {
   }
 
   // Upsert (on conflict: update value + metadata)
-  const { error } = await supabase
+  const { error } = await supabaseAdmin
     .from("daily_snapshots")
     .upsert(rows, { onConflict: "date,source,region" });
 
@@ -233,7 +233,7 @@ export async function POST() {
   }
 
   // Cleanup old rows (>30 days)
-  await supabase
+  await supabaseAdmin
     .from("daily_snapshots")
     .delete()
     .lt("date", new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
