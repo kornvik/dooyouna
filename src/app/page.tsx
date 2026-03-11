@@ -57,7 +57,10 @@ export default function HomePage() {
   >("connecting");
   const [mobilePanel, setMobilePanel] = useState<null | "layers" | "news">(null);
   const [selectedProvince, setSelectedProvince] = useState<ProvinceProperties | null>(null);
-  const [showDisclaimer, setShowDisclaimer] = useState(true);
+  const [showDisclaimer, setShowDisclaimer] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("disclaimerAck");
+  });
 
   // Toggle layer
   const handleToggle = useCallback((layer: LayerName) => {
@@ -308,7 +311,7 @@ export default function HomePage() {
               ข้อมูลรวบรวมจากแหล่งเปิดสาธารณะ อาจไม่ครบถ้วนหรือมีความคลาดเคลื่อน ไม่ควรใช้เป็นข้อมูลอ้างอิงหลัก
             </p>
             <button
-              onClick={() => setShowDisclaimer(false)}
+              onClick={() => { localStorage.setItem("disclaimerAck", "1"); setShowDisclaimer(false); }}
               className="text-[10px] tracking-wider px-4 py-1.5 border border-[var(--accent)] text-[var(--accent)] rounded hover:bg-[var(--accent)] hover:text-black transition-colors cursor-pointer"
             >
               รับทราบ
