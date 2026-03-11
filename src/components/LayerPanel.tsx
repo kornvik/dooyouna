@@ -24,6 +24,7 @@ interface LayerPanelProps {
   onToggle: (layer: LayerName) => void;
   fastData: FastData | null;
   slowData: SlowData | null;
+  slowLoaded: Set<string>;
 }
 
 interface LayerItemProps {
@@ -90,6 +91,7 @@ export default function LayerPanel({
   onToggle,
   fastData,
   slowData,
+  slowLoaded,
 }: LayerPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const flights = fastData?.flights;
@@ -172,8 +174,8 @@ export default function LayerPanel({
           name="ships"
           label="เรือ"
           icon={<Ship size={13} />}
-          count={slowData?.ships?.length}
-          loading={!slowData}
+          count={slowLoaded.has("ships") ? slowData?.ships?.length : undefined}
+          loading={!slowLoaded.has("ships")}
           active={activeLayers.has("ships")}
           color="#00ff88"
           source="AIS (MarineTraffic)"
@@ -188,8 +190,8 @@ export default function LayerPanel({
           name="earthquakes"
           label="แผ่นดินไหว"
           icon={<Activity size={13} />}
-          count={slowData?.earthquakes?.length}
-          loading={!slowData}
+          count={slowLoaded.has("earthquakes") ? slowData?.earthquakes?.length : undefined}
+          loading={!slowLoaded.has("earthquakes")}
           active={activeLayers.has("earthquakes")}
           color="#ff4444"
           source="USGS Earthquake API"
@@ -199,8 +201,8 @@ export default function LayerPanel({
           name="fires"
           label="จุดความร้อน"
           icon={<Flame size={13} />}
-          count={slowData?.fires?.length}
-          loading={!slowData}
+          count={slowLoaded.has("fires") ? slowData?.fires?.length : undefined}
+          loading={!slowLoaded.has("fires")}
           active={activeLayers.has("fires")}
           color="#ff4400"
           source="NASA FIRMS (VIIRS/MODIS)"
@@ -210,8 +212,8 @@ export default function LayerPanel({
           name="flood"
           label="น้ำท่วม / ระดับน้ำ"
           icon={<Droplets size={13} />}
-          count={slowData?.flood?.length}
-          loading={!slowData}
+          count={slowLoaded.has("flood") ? slowData?.flood?.length : undefined}
+          loading={!slowLoaded.has("flood")}
           active={activeLayers.has("flood")}
           color="#4488ff"
           source="สสน. (thaiwater.net)"
@@ -230,7 +232,7 @@ export default function LayerPanel({
           name="weather"
           label="เรดาร์สภาพอากาศ"
           icon={<CloudRain size={13} />}
-          loading={!slowData}
+          loading={!slowLoaded.has("weather")}
           active={activeLayers.has("weather")}
           color="#4488ff"
           source="RainViewer API"
@@ -240,8 +242,8 @@ export default function LayerPanel({
           name="airQuality"
           label="คุณภาพอากาศ PM2.5"
           icon={<Wind size={13} />}
-          count={slowData?.air_quality?.length}
-          loading={!slowData}
+          count={slowLoaded.has("air_quality") ? slowData?.air_quality?.length : undefined}
+          loading={!slowLoaded.has("air_quality")}
           active={activeLayers.has("airQuality")}
           color="#cc00ff"
           source="กรมควบคุมมลพิษ (air4thai)"
@@ -256,8 +258,8 @@ export default function LayerPanel({
           name="news"
           label="ฟีดข่าว"
           icon={<Newspaper size={13} />}
-          count={slowData?.news?.length}
-          loading={!slowData}
+          count={slowLoaded.has("news") ? slowData?.news?.length : undefined}
+          loading={!slowLoaded.has("news")}
           active={activeLayers.has("news")}
           color="#44aaff"
           source="Bangkok Post / Khmer Times / RSS"

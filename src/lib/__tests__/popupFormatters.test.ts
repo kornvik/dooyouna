@@ -199,9 +199,9 @@ describe("formatCctv", () => {
 });
 
 describe("formatFlood", () => {
-  it("shows critical flood styling for critical=true", () => {
+  it("shows alert styling for situation_level 5", () => {
     const html = formatFlood({
-      critical: true,
+      situation_level: 5,
       name: "สถานีน้ำ A",
       province: "เชียงราย",
       basin: "แม่โขง",
@@ -209,45 +209,47 @@ describe("formatFlood", () => {
       bank_diff: "1.2",
       datetime: "2024-01-15 12:00",
     });
-    expect(html).toContain("#0044cc"); // dark blue for critical
-    expect(html).toContain("น้ำท่วมวิกฤต");
+    expect(html).toContain("#ff6600"); // orange for alert
+    expect(html).toContain("เตือนภัย");
+    expect(html).toContain("ระดับ 5");
     expect(html).toContain("สถานีน้ำ A");
     expect(html).toContain("เชียงราย");
     expect(html).toContain("แม่โขง");
     expect(html).toContain("200.5");
-    expect(html).toContain("1.2");
+    expect(html).toContain("เหนือตลิ่ง: 1.2 ม.");
   });
 
-  it("shows normal flood styling for critical=false", () => {
+  it("shows watch styling for situation_level 4", () => {
     const html = formatFlood({
-      critical: false,
+      situation_level: 4,
       name: "Station B",
       province: "Bangkok",
       basin: "Chao Phraya",
       datetime: "2024-01-15",
     });
-    expect(html).toContain("#4488ff"); // lighter blue for normal
-    expect(html).toContain("ระดับน้ำสูง");
+    expect(html).toContain("#ffaa00"); // amber for watch
+    expect(html).toContain("เฝ้าระวัง");
+    expect(html).toContain("ระดับ 4");
   });
 
-  it("handles critical as string 'true'", () => {
-    const html = formatFlood({ critical: "true", name: "X", datetime: "" });
-    expect(html).toContain("น้ำท่วมวิกฤต");
+  it("shows below-bank label for negative bank_diff", () => {
+    const html = formatFlood({ situation_level: 4, name: "X", datetime: "", bank_diff: "-2.5" });
+    expect(html).toContain("ต่ำกว่าตลิ่ง: 2.5 ม.");
   });
 
   it("omits water_level and bank_diff when null", () => {
     const html = formatFlood({
-      critical: false,
+      situation_level: 4,
       name: "Test",
       datetime: "2024-01-01",
     });
     expect(html).not.toContain("MSL");
-    expect(html).not.toContain("เหนือตลิ่ง");
+    expect(html).not.toContain("ตลิ่ง");
   });
 
   it("falls back to name_th if name missing", () => {
     const html = formatFlood({
-      critical: false,
+      situation_level: 4,
       name_th: "สถานีทดสอบ",
       datetime: "",
     });

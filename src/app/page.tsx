@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import { BarChart3 } from "lucide-react";
 import LayerPanel from "@/components/LayerPanel";
 import NewsFeed from "@/components/NewsFeed";
 import ThreatIndex from "@/components/ThreatIndex";
@@ -48,6 +50,7 @@ export default function HomePage() {
   const [activeLayers, setActiveLayers] = useState<Set<LayerName>>(
     () => new Set(DEFAULT_LAYERS)
   );
+  const [slowLoaded, setSlowLoaded] = useState<Set<string>>(() => new Set());
   const [connectionStatus, setConnectionStatus] = useState<
     "connecting" | "live" | "error"
   >("connecting");
@@ -96,6 +99,7 @@ export default function HomePage() {
           const data = await fetchSource(source);
           if (!mounted || data == null) return;
           setSlowData(prev => ({ ...prev, [source]: data }));
+          setSlowLoaded(prev => { const next = new Set(prev); next.add(source); return next; });
         } catch {
           // keep previous data
         }
@@ -136,6 +140,13 @@ export default function HomePage() {
           <div className="text-[10px] text-[var(--text-secondary)] tracking-wider">
             ข่าวกรองประเทศไทย
           </div>
+          <Link
+            href="/trends"
+            className="flex items-center gap-1 text-[10px] text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors ml-2 border border-[var(--border-color)] rounded px-2 py-0.5"
+          >
+            <BarChart3 size={10} />
+            แนวโน้ม
+          </Link>
         </div>
 
         <div className="flex items-center gap-4 text-[10px]">
@@ -188,6 +199,7 @@ export default function HomePage() {
           onToggle={handleToggle}
           fastData={fastData}
           slowData={slowData}
+          slowLoaded={slowLoaded}
         />
       </div>
 

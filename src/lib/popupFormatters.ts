@@ -101,16 +101,23 @@ export function formatCctv(p: Props): string {
 }
 
 export function formatFlood(p: Props): string {
-  const isCritical = p.critical === "true" || p.critical === true;
-  const color = isCritical ? "#0044cc" : "#4488ff";
-  const label = isCritical ? "น้ำท่วมวิกฤต" : "ระดับน้ำสูง";
+  const level = Number(p.situation_level) || 4;
+  const levelInfo: Record<number, { label: string; color: string }> = {
+    4: { label: "เฝ้าระวัง", color: "#ffaa00" },
+    5: { label: "เตือนภัย", color: "#ff6600" },
+  };
+  const { label, color } = levelInfo[level] ?? { label: "เตือนภัย", color: "#ff4444" };
+  const bankDiff = parseFloat(String(p.bank_diff || ""));
+  const bankLabel = !isNaN(bankDiff)
+    ? (bankDiff > 0 ? `เหนือตลิ่ง: ${bankDiff} ม.` : `ต่ำกว่าตลิ่ง: ${Math.abs(bankDiff)} ม.`)
+    : "";
   return `<div ${POPUP_STYLE}>
-    <div style="color:${color};font-weight:bold;">${label}</div>
+    <div style="color:${color};font-weight:bold;">${label} (ระดับ ${level})</div>
     <div>${p.name || p.name_th}</div>
     <div>${p.province || p.province_th}</div>
     <div>ลุ่มน้ำ: ${p.basin || "N/A"}</div>
     ${p.water_level_msl ? `<div>ระดับ: ${p.water_level_msl} MSL</div>` : ""}
-    ${p.bank_diff ? `<div>เหนือตลิ่ง: ${p.bank_diff} ม.</div>` : ""}
+    ${bankLabel ? `<div>${bankLabel}</div>` : ""}
     <div style="color:var(--text-secondary);font-size:9px;">${p.datetime}</div>
   </div>`;
 }

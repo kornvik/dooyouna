@@ -89,10 +89,89 @@ const THAI_ICAO_CODES = new Set([
   "THA", "AIQ", "NOK", "TDM", "BKP", "SLC", "TVJ",
 ]);
 
-export function isDomestic(ac: Aircraft): boolean {
+/** Guess-based: Thai airline or HS- registration */
+export function isDomesticGuess(ac: Aircraft): boolean {
   if (ac.registration.startsWith("HS-")) return true;
   const prefix = ac.callsign.slice(0, 3);
   return prefix.length === 3 && THAI_ICAO_CODES.has(prefix);
+}
+
+// --- OpenSky route cache (persists in-memory across requests) ---
+const routeCache = new Map<string, { domestic: boolean; route: string[]; ts: number }>();
+const ROUTE_CACHE_TTL = 24 * 60 * 60 * 1000; // 24h
+const MAX_LOOKUPS_PER_POLL = 25;
+
+/** Check if a route is domestic (both airports in Thailand = VT prefix) */
+function isRouteDomestic(route: string[]): boolean {
+  if (route.length < 2) return false;
+  return route[0].startsWith("VT") && route[1].startsWith("VT");
+}
+
+/** Look up route for a single callsign via OpenSky (free, no key) */
+async function lookupRoute(callsign: string): Promise<{ domestic: boolean; route: string[] } | null> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(
+      `https://opensky-network.org/api/routes?callsign=${encodeURIComponent(callsign)}`,
+      { signal: controller.signal, headers: { "User-Agent": USER_AGENT } },
+    );
+    clearTimeout(timeout);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const route: string[] = data.route || [];
+    if (route.length < 2) return null;
+    return { domestic: isRouteDomestic(route), route };
+  } catch {
+    return null;
+  }
+}
+
+/** Enrich flights with real route data. Lazy: only looks up uncached callsigns. */
+async function enrichWithRoutes(aircraft: Aircraft[]): Promise<void> {
+  const now = Date.now();
+  // Clean expired entries
+  for (const [key, val] of routeCache) {
+    if (now - val.ts > ROUTE_CACHE_TTL) routeCache.delete(key);
+  }
+
+  const uncached = aircraft
+    .filter((ac) => ac.callsign && !routeCache.has(ac.callsign))
+    .slice(0, MAX_LOOKUPS_PER_POLL);
+
+  if (uncached.length === 0) return;
+
+  const results = await Promise.allSettled(
+    uncached.map(async (ac) => {
+      const result = await lookupRoute(ac.callsign);
+      if (result) {
+        routeCache.set(ac.callsign, { ...result, ts: now });
+      }
+    }),
+  );
+  // ignore failures silently
+  void results;
+}
+
+/** Determine if a flight is domestic — uses route cache if available, falls back to guess */
+export function isDomestic(ac: Aircraft): boolean {
+  const cached = routeCache.get(ac.callsign);
+  if (cached) return cached.domestic;
+  return isDomesticGuess(ac);
+}
+
+export type FlightDirection = "domestic" | "inbound" | "outbound" | "unknown";
+
+/** Classify flight direction using route cache */
+export function getFlightDirection(ac: Aircraft): FlightDirection {
+  const cached = routeCache.get(ac.callsign);
+  if (!cached || cached.route.length < 2) return "unknown";
+  const originTH = cached.route[0].startsWith("VT");
+  const destTH = cached.route[1].startsWith("VT");
+  if (originTH && destTH) return "domestic";
+  if (!originTH && destTH) return "inbound";
+  if (originTH && !destTH) return "outbound";
+  return "unknown"; // transit
 }
 
 function classifyFlights(aircraft: Aircraft[]): FlightData {
@@ -159,6 +238,10 @@ export async function fetchFlights(): Promise<{
     ]);
 
     const regionalAircraft = mapToAircraft(regionalData.ac);
+
+    // Lazy-enrich with real route data (non-blocking, fills cache over time)
+    await enrichWithRoutes(regionalAircraft);
+
     const flights = classifyFlights(regionalAircraft);
 
     const globalMilAircraft = mapToAircraft(milData.ac);

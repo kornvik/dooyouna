@@ -45,7 +45,7 @@ async function reverseGeocode(
   country_code: string;
 } | null> {
   try {
-    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10`;
+    const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&zoom=10&accept-language=th,en`;
     const response = await fetchWithTimeout(url);
 
     if (!response.ok) {

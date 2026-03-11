@@ -170,20 +170,16 @@ describe("ThreatIndex - Calm scenario", () => {
     expect(calmMatches!.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("shows zero scores when all data is null", () => {
+  it("shows loading state when fastData is null", () => {
     const { container } = render(
       <ThreatIndex fastData={null} slowData={null} />
     );
 
+    // Should show loading panels instead of scores
+    expect(container.textContent).toContain("กำลังโหลด...");
+    // No score elements should be rendered
     const scoreEls = container.querySelectorAll(".font-mono");
-    expect(scoreEls).toHaveLength(2);
-
-    const naturalScore = parseInt(scoreEls[0].textContent || "0", 10);
-    const securityScore = parseInt(scoreEls[1].textContent || "0", 10);
-
-    expect(naturalScore).toBe(0);
-    expect(securityScore).toBe(0);
-    expect(container.textContent).toContain("ปกติ");
+    expect(scoreEls).toHaveLength(0);
   });
 });
 

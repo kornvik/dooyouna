@@ -10,6 +10,7 @@
     "test": "vitest"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.99.1",
     "lucide-react": "^0.468.0",
     "maplibre-gl": "^4.7.1",
     "next": "^15.1.0",

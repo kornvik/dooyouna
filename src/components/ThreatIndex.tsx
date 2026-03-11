@@ -42,6 +42,33 @@ function signalColor(score: number): string {
   return score > 60 ? "#ff4444" : score > 30 ? "#ffaa00" : "#00ff88";
 }
 
+function LoadingPanel({ title }: { title: string }) {
+  return (
+    <div className="hud-panel w-56">
+      <div
+        className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-between"
+        style={{ background: "rgba(255,255,255,0.03)" }}
+      >
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={12} style={{ color: "var(--text-secondary)" }} />
+          <span className="text-[10px] tracking-widest font-bold text-[var(--text-secondary)]">
+            {title}
+          </span>
+        </div>
+        <span
+          className="inline-block w-3 h-3 border border-t-transparent rounded-full animate-spin"
+          style={{ borderColor: "var(--text-secondary)", borderTopColor: "transparent" }}
+        />
+      </div>
+      <div className="px-3 py-3 flex items-center justify-center">
+        <span className="text-[9px] text-[var(--text-secondary)] animate-pulse">
+          กำลังโหลด...
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function ThreatPanel({ title, signals, totalScore, level }: PanelData) {
   return (
     <div className="hud-panel w-56">
@@ -204,13 +231,17 @@ export default function ThreatIndex({ fastData, slowData, panel = "both" }: Thre
     };
   }, [fastData, slowData]);
 
-  if (panel === "natural") return <ThreatPanel {...naturalPanel} />;
-  if (panel === "security") return <ThreatPanel {...securityPanel} />;
+  if (panel === "natural") {
+    return !fastData ? <LoadingPanel title="ดัชนีภัยธรรมชาติ" /> : <ThreatPanel {...naturalPanel} />;
+  }
+  if (panel === "security") {
+    return !fastData ? <LoadingPanel title="ดัชนีความมั่นคง" /> : <ThreatPanel {...securityPanel} />;
+  }
 
   return (
     <div className="flex flex-col gap-2">
-      <ThreatPanel {...naturalPanel} />
-      <ThreatPanel {...securityPanel} />
+      {!fastData ? <LoadingPanel title="ดัชนีภัยธรรมชาติ" /> : <ThreatPanel {...naturalPanel} />}
+      {!fastData ? <LoadingPanel title="ดัชนีความมั่นคง" /> : <ThreatPanel {...securityPanel} />}
     </div>
   );
 }

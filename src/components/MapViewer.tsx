@@ -102,79 +102,107 @@ function createFireIcon(size = 28): { width: number; height: number; data: Uint8
   return { width: size, height: size, data: imageData.data };
 }
 
-// Water drop icon for flood stations
+// Curvy wave icon for flood stations (amber=watch, orange=alert)
 function createFloodIcon(critical: boolean, size = 28): { width: number; height: number; data: Uint8ClampedArray } {
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d")!;
   const s = size;
-  const color = critical ? "#0044cc" : "#66bbff";
+  const color = critical ? "#ff6600" : "#ffaa00";
 
-  // Water drop shape
+  // Three stacked waves, each offset
+  const waveRows = [
+    { y: 0.30, amp: 0.06, opacity: 0.5, width: 1.5 },
+    { y: 0.50, amp: 0.07, opacity: 0.75, width: 2.0 },
+    { y: 0.70, amp: 0.08, opacity: 1.0, width: 2.5 },
+  ];
+
+  for (const wave of waveRows) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = wave.width;
+    ctx.globalAlpha = wave.opacity;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(s * 0.08, s * wave.y);
+    ctx.bezierCurveTo(
+      s * 0.22, s * (wave.y - wave.amp),
+      s * 0.36, s * (wave.y + wave.amp),
+      s * 0.50, s * wave.y,
+    );
+    ctx.bezierCurveTo(
+      s * 0.64, s * (wave.y - wave.amp),
+      s * 0.78, s * (wave.y + wave.amp),
+      s * 0.92, s * wave.y,
+    );
+    ctx.stroke();
+  }
+
+  // Filled water body below the bottom wave
+  ctx.globalAlpha = 0.2;
   ctx.fillStyle = color;
-  ctx.strokeStyle = "rgba(255,255,255,0.4)";
-  ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(s * 0.5, s * 0.08);
-  ctx.bezierCurveTo(s * 0.5, s * 0.08, s * 0.2, s * 0.5, s * 0.2, s * 0.65);
-  ctx.bezierCurveTo(s * 0.2, s * 0.85, s * 0.33, s * 0.95, s * 0.5, s * 0.95);
-  ctx.bezierCurveTo(s * 0.67, s * 0.95, s * 0.8, s * 0.85, s * 0.8, s * 0.65);
-  ctx.bezierCurveTo(s * 0.8, s * 0.5, s * 0.5, s * 0.08, s * 0.5, s * 0.08);
+  ctx.moveTo(s * 0.08, s * 0.70);
+  ctx.bezierCurveTo(s * 0.22, s * 0.62, s * 0.36, s * 0.78, s * 0.50, s * 0.70);
+  ctx.bezierCurveTo(s * 0.64, s * 0.62, s * 0.78, s * 0.78, s * 0.92, s * 0.70);
+  ctx.lineTo(s * 0.92, s * 0.95);
+  ctx.lineTo(s * 0.08, s * 0.95);
   ctx.closePath();
   ctx.fill();
-  ctx.stroke();
-
-  // Wave lines inside for flood effect
-  ctx.strokeStyle = "rgba(255,255,255,0.3)";
-  ctx.lineWidth = 1.2;
-  ctx.beginPath();
-  ctx.moveTo(s * 0.28, s * 0.68);
-  ctx.bezierCurveTo(s * 0.35, s * 0.63, s * 0.45, s * 0.73, s * 0.55, s * 0.65);
-  ctx.bezierCurveTo(s * 0.62, s * 0.6, s * 0.68, s * 0.68, s * 0.72, s * 0.66);
-  ctx.stroke();
+  ctx.globalAlpha = 1;
 
   const imageData = ctx.getImageData(0, 0, size, size);
   return { width: size, height: size, data: imageData.data };
 }
 
-// AQ gauge dot with colored ring and label
-function createAQIcon(level: "good" | "moderate" | "bad" | "hazardous", size = 32): { width: number; height: number; data: Uint8ClampedArray } {
+// Cloud/wind icon for air quality stations
+function createAQCloudIcon(level: "good" | "moderate" | "bad" | "hazardous", size = 32): { width: number; height: number; data: Uint8ClampedArray } {
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
   const ctx = canvas.getContext("2d")!;
-  const center = size / 2;
-  const radius = size * 0.38;
+  const s = size;
 
-  const colors = {
-    good: "#00ff88",
-    moderate: "#ffaa00",
-    bad: "#ff4444",
-    hazardous: "#cc00ff",
-  };
+  const colors = { good: "#00ff88", moderate: "#ffaa00", bad: "#ff4444", hazardous: "#cc00ff" };
   const color = colors[level];
 
-  // Outer ring
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(center, center, radius, 0, Math.PI * 2);
-  ctx.stroke();
-
-  // Filled center
+  // Cloud shape
   ctx.fillStyle = color;
   ctx.globalAlpha = 0.25;
   ctx.beginPath();
-  ctx.arc(center, center, radius - 2, 0, Math.PI * 2);
+  ctx.arc(s * 0.35, s * 0.52, s * 0.22, 0, Math.PI * 2);
+  ctx.arc(s * 0.55, s * 0.38, s * 0.25, 0, Math.PI * 2);
+  ctx.arc(s * 0.72, s * 0.50, s * 0.20, 0, Math.PI * 2);
+  ctx.rect(s * 0.15, s * 0.52, s * 0.72, s * 0.18);
   ctx.fill();
   ctx.globalAlpha = 1;
 
-  // Center dot
-  ctx.fillStyle = color;
+  // Cloud outline
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.arc(center, center, 3, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.arc(s * 0.35, s * 0.52, s * 0.22, Math.PI * 0.7, Math.PI * 1.9);
+  ctx.arc(s * 0.55, s * 0.38, s * 0.25, Math.PI * 1.1, Math.PI * 1.9);
+  ctx.arc(s * 0.72, s * 0.50, s * 0.20, Math.PI * 1.4, Math.PI * 0.4);
+  ctx.lineTo(s * 0.87, s * 0.68);
+  ctx.lineTo(s * 0.15, s * 0.68);
+  ctx.closePath();
+  ctx.stroke();
+
+  // Wind lines underneath
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.2;
+  ctx.globalAlpha = 0.6;
+  for (let i = 0; i < 3; i++) {
+    const y = s * (0.74 + i * 0.07);
+    const xStart = s * (0.2 + i * 0.08);
+    const xEnd = s * (0.7 - i * 0.05);
+    ctx.beginPath();
+    ctx.moveTo(xStart, y);
+    ctx.bezierCurveTo(xStart + s * 0.1, y - s * 0.02, xEnd - s * 0.1, y + s * 0.02, xEnd, y);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 
   const imageData = ctx.getImageData(0, 0, size, size);
   return { width: size, height: size, data: imageData.data };
@@ -340,11 +368,11 @@ export default function MapViewer({
       if (!map.hasImage("flood-normal")) map.addImage("flood-normal", createFloodIcon(false, 28), { sdf: false });
       if (!map.hasImage("flood-critical")) map.addImage("flood-critical", createFloodIcon(true, 28), { sdf: false });
 
-      // AQ icons
+      // AQ cloud icons
       const aqLevels: Array<"good" | "moderate" | "bad" | "hazardous"> = ["good", "moderate", "bad", "hazardous"];
       for (const level of aqLevels) {
         const name = `aq-${level}`;
-        if (!map.hasImage(name)) map.addImage(name, createAQIcon(level, 32), { sdf: false });
+        if (!map.hasImage(name)) map.addImage(name, createAQCloudIcon(level, 32), { sdf: false });
       }
 
       // Thailand border highlight (high-res from OSM)
@@ -447,7 +475,7 @@ export default function MapViewer({
         paint: { "raster-opacity": 0.5 },
       });
     }
-  }, [slowData?.weather, activeLayers]);
+  }, [slowData?.weather, activeLayers.has("weather")]);
 
   // NASA GIBS satellite flood extent overlay (MODIS 3-day composite)
   useEffect(() => {
@@ -471,14 +499,17 @@ export default function MapViewer({
         ],
         tileSize: 256,
       });
-      map.addLayer({
-        id: floodSatId,
-        type: "raster",
-        source: floodSatId,
-        paint: { "raster-opacity": 0.85 },
-      });
+      map.addLayer(
+        {
+          id: floodSatId,
+          type: "raster",
+          source: floodSatId,
+          paint: { "raster-opacity": 0.85 },
+        },
+        "domestic-flights-layer" // insert below all data layers
+      );
     }
-  }, [activeLayers]);
+  }, [activeLayers.has("floodSatellite")]);
 
   // NASA VIIRS nighttime lights overlay (Black Marble + daily radiance)
   useEffect(() => {
@@ -502,6 +533,8 @@ export default function MapViewer({
         ],
         tileSize: 256,
       });
+      // Insert below flood satellite if present, else below flights
+      const viirsBefore = map.getLayer("flood-satellite") ? "flood-satellite" : "domestic-flights-layer";
       map.addLayer(
         {
           id: nightId,
@@ -509,10 +542,10 @@ export default function MapViewer({
           source: nightId,
           paint: { "raster-opacity": 0.85 },
         },
-        "country-borders-fill" // insert below borders so borders stay visible
+        viirsBefore
       );
     }
-  }, [activeLayers]);
+  }, [activeLayers.has("nightLights")]);
 
   return (
     <div className="relative w-full h-full">
@@ -734,7 +767,7 @@ function setupLayers(map: maplibregl.Map) {
     },
   });
 
-  // --- Air quality: clusters as bigger AQ icons with avg PM2.5 ---
+  // --- Air quality: clustered with cloud icon + avg PM2.5 ---
   map.addLayer({
     id: "air-quality-cluster",
     type: "symbol",
@@ -770,7 +803,7 @@ function setupLayers(map: maplibregl.Map) {
     },
   });
 
-  // --- Air quality: individual icons (unclustered) ---
+  // --- Air quality: individual cloud icon + PM2.5 value ---
   map.addLayer({
     id: "air-quality-layer",
     type: "symbol",
@@ -787,8 +820,8 @@ function setupLayers(map: maplibregl.Map) {
       "icon-size": 0.85,
       "icon-allow-overlap": true,
       "icon-ignore-placement": true,
-      "text-field": ["concat", ["to-string", ["round", ["get", "pm25"]]], ""],
-      "text-size": 8,
+      "text-field": ["to-string", ["round", ["get", "pm25"]]],
+      "text-size": 9,
       "text-offset": [0, 1.8],
       "text-allow-overlap": true,
     },
@@ -805,7 +838,7 @@ function setupLayers(map: maplibregl.Map) {
   });
 
 
-  // --- Flood: clusters as bigger water drop icons ---
+  // --- Flood: clusters as wave icons ---
   map.addLayer({
     id: "flood-cluster",
     type: "symbol",
@@ -835,7 +868,7 @@ function setupLayers(map: maplibregl.Map) {
     },
   });
 
-  // --- Flood: individual water drop icons (unclustered) ---
+  // --- Flood: individual wave icons (unclustered) ---
   map.addLayer({
     id: "flood-layer",
     type: "symbol",
@@ -983,7 +1016,7 @@ function updateMapData(
     fires: ["fires-layer", "fires-cluster"],
     weather: [],
     news: [],
-    airQuality: ["air-quality-layer", "air-quality-cluster"],
+    airQuality: ["air-quality-cluster", "air-quality-layer"],
     flood: ["flood-layer", "flood-cluster"],
     floodSatellite: [], // managed as raster in separate useEffect
     nightLights: [], // managed as raster in separate useEffect
