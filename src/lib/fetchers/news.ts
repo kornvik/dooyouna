@@ -10,14 +10,18 @@ interface FeedConfig {
 }
 
 const FEEDS: FeedConfig[] = [
-  { name: "Bangkok Post", url: "https://www.bangkokpost.com/rss/data/topstories.xml", weight: 5 },
-  { name: "The Nation Thailand", url: "https://www.nationthailand.com/rss", weight: 4 },
-  { name: "Khmer Times", url: "https://www.khmertimeskh.com/feed/", weight: 5 },
-  { name: "Phnom Penh Post", url: "https://www.phnompenhpost.com/rss.xml", weight: 4 },
-  { name: "CNA Southeast Asia", url: "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=6511", weight: 3 },
-  { name: "GDACS Disasters", url: "https://www.gdacs.org/xml/rss.xml", weight: 3 },
-  { name: "ReliefWeb Thailand", url: "https://reliefweb.int/updates/rss.xml?search=Thailand", weight: 2 },
-  { name: "ReliefWeb Cambodia", url: "https://reliefweb.int/updates/rss.xml?search=Cambodia", weight: 2 },
+  // Thai news — reliable sources
+  { name: "Thai PBS", url: "https://www.thaipbs.or.th/rss/news.xml", weight: 5 },
+  { name: "Prachatai English", url: "https://prachatai.com/english/feed", weight: 4 },
+  // Cambodia news
+  { name: "CNA Southeast Asia", url: "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=6511", weight: 4 },
+  // Regional security & disasters
+  { name: "GDACS Disasters", url: "https://www.gdacs.org/xml/rss.xml", weight: 5 },
+  // Google News for targeted topics (more reliable than individual sites)
+  { name: "Thailand News", url: "https://news.google.com/rss/search?q=Thailand+when:3d&hl=en&gl=US&ceid=US:en", weight: 3 },
+  { name: "Cambodia News", url: "https://news.google.com/rss/search?q=Cambodia+when:3d&hl=en&gl=US&ceid=US:en", weight: 3 },
+  { name: "Myanmar News", url: "https://news.google.com/rss/search?q=Myanmar+military+OR+conflict+when:3d&hl=en&gl=US&ceid=US:en", weight: 3 },
+  { name: "SE Asia Security", url: "https://news.google.com/rss/search?q=Southeast+Asia+security+OR+military+OR+disaster+when:3d&hl=en&gl=US&ceid=US:en", weight: 2 },
 ];
 
 const MAX_ITEMS_PER_FEED = 10;
@@ -29,6 +33,20 @@ function trimSummary(raw: string | undefined): string {
   const trimmed = raw.trim();
   if (trimmed.length <= SUMMARY_MAX_LENGTH) return trimmed;
   return trimmed.slice(0, SUMMARY_MAX_LENGTH);
+}
+
+// Region keywords — article must mention one of these places
+const REGION_KEYWORDS = [
+  "thailand", "thai", "cambodia", "khmer", "myanmar", "burma", "laos", "vietnam",
+  "southeast asia", "asean", "mekong", "andaman", "south china sea",
+  "bangkok", "pattaya", "chiang mai", "chiang rai", "phuket", "phnom penh",
+  "siem reap", "yangon", "mandalay", "hanoi", "vientiane",
+];
+
+function isRelevant(article: NewsArticle): boolean {
+  const text = `${article.title} ${article.summary}`.toLowerCase();
+  // Must mention a place in our region
+  return REGION_KEYWORDS.some(kw => text.includes(kw));
 }
 
 async function parseFeed(
@@ -74,9 +92,13 @@ export async function fetchNews(): Promise<NewsArticle[]> {
     FEEDS.map((feed) => parseFeed(feed, parser)),
   );
 
-  const allArticles = results.flat();
+  const allArticles = results.flat().filter(isRelevant);
 
-  allArticles.sort((a, b) => b.weight - a.weight);
+  // Sort by weight (source priority) then by date
+  allArticles.sort((a, b) => {
+    if (b.weight !== a.weight) return b.weight - a.weight;
+    return new Date(b.published).getTime() - new Date(a.published).getTime();
+  });
 
   return allArticles.slice(0, MAX_TOTAL_ARTICLES);
 }

@@ -41,30 +41,30 @@ describe("fetchNews", () => {
     mockParseString.mockResolvedValue(
       makeFeedResult([
         {
-          title: "Test Article",
+          title: "Thailand military exercises begin",
           link: "https://example.com/1",
           pubDate: "2024-01-01",
-          contentSnippet: "A short summary.",
+          contentSnippet: "A short summary about Thailand.",
         },
       ]),
     );
 
     const articles = await fetchNews();
 
-    // 8 feeds * 1 article each = 8 articles
+    // 8 feeds * 1 article each = 8 articles (all pass relevance filter)
     expect(articles).toHaveLength(8);
     expect(articles[0]).toMatchObject({
-      title: "Test Article",
+      title: "Thailand military exercises begin",
       link: "https://example.com/1",
       published: "2024-01-01",
-      summary: "A short summary.",
+      summary: "A short summary about Thailand.",
     });
   });
 
-  it("sorts articles by weight descending", async () => {
-    // Each feed call returns 1 item
+  it("sorts articles by weight descending then by date", async () => {
+    // Each feed call returns 1 item with a relevant keyword
     mockParseString.mockResolvedValue(
-      makeFeedResult([{ title: "Article", link: "https://x.com", pubDate: "2024-01-01" }]),
+      makeFeedResult([{ title: "Bangkok flood update", link: "https://x.com", pubDate: "2024-01-01" }]),
     );
 
     const articles = await fetchNews();
@@ -79,7 +79,7 @@ describe("fetchNews", () => {
   it("caps total articles at 50", async () => {
     // Return 10 items per feed (8 feeds * 10 = 80 > 50)
     const tenItems = Array.from({ length: 10 }, (_, i) => ({
-      title: `Article ${i}`,
+      title: `Thailand earthquake report ${i}`,
       link: `https://example.com/${i}`,
       pubDate: "2024-01-01",
     }));
@@ -92,7 +92,7 @@ describe("fetchNews", () => {
 
   it("takes only top 10 items per feed", async () => {
     const fifteenItems = Array.from({ length: 15 }, (_, i) => ({
-      title: `Article ${i}`,
+      title: `Cambodia government update ${i}`,
       link: `https://example.com/${i}`,
       pubDate: "2024-01-01",
     }));
@@ -105,10 +105,10 @@ describe("fetchNews", () => {
   });
 
   it("trims summary to 200 characters", async () => {
-    const longText = "A".repeat(300);
+    const longText = "Thailand flood warning ".repeat(20);
     mockParseString.mockResolvedValue(
       makeFeedResult([
-        { title: "Long", link: "https://x.com", contentSnippet: longText },
+        { title: "Thailand alert", link: "https://x.com", contentSnippet: longText },
       ]),
     );
 
@@ -119,7 +119,7 @@ describe("fetchNews", () => {
 
   it("handles empty contentSnippet gracefully", async () => {
     mockParseString.mockResolvedValue(
-      makeFeedResult([{ title: "No snippet", link: "https://x.com" }]),
+      makeFeedResult([{ title: "Myanmar conflict escalates", link: "https://x.com" }]),
     );
 
     const articles = await fetchNews();
@@ -131,7 +131,7 @@ describe("fetchNews", () => {
     mockParseString.mockResolvedValue(
       makeFeedResult([
         {
-          title: "ISO",
+          title: "Thai military drill",
           link: "https://x.com",
           isoDate: "2024-06-15T10:00:00Z",
         },
@@ -148,7 +148,7 @@ describe("fetchNews", () => {
     mockParseString.mockImplementation(() => {
       callCount++;
       if (callCount === 1) throw new Error("Parse failed");
-      return makeFeedResult([{ title: "OK", link: "https://x.com" }]);
+      return makeFeedResult([{ title: "Cambodia election update", link: "https://x.com" }]);
     });
 
     const articles = await fetchNews();
@@ -173,7 +173,7 @@ describe("fetchNews", () => {
       }),
     );
     mockParseString.mockResolvedValue(
-      makeFeedResult([{ title: "OK", link: "https://x.com" }]),
+      makeFeedResult([{ title: "ASEAN security summit", link: "https://x.com" }]),
     );
 
     const articles = await fetchNews();
@@ -183,16 +183,16 @@ describe("fetchNews", () => {
 
   it("assigns correct source name to each article", async () => {
     mockParseString.mockResolvedValue(
-      makeFeedResult([{ title: "Test", link: "https://x.com" }]),
+      makeFeedResult([{ title: "Thailand earthquake report", link: "https://x.com" }]),
     );
 
     const articles = await fetchNews();
 
     const sources = articles.map((a) => a.source);
-    expect(sources).toContain("Bangkok Post");
-    expect(sources).toContain("Khmer Times");
+    expect(sources).toContain("Thai PBS");
+    expect(sources).toContain("Prachatai English");
     expect(sources).toContain("CNA Southeast Asia");
-    expect(sources).toContain("ReliefWeb Thailand");
+    expect(sources).toContain("GDACS Disasters");
   });
 
   it("returns empty array when all feeds fail", async () => {
@@ -204,5 +204,60 @@ describe("fetchNews", () => {
     const articles = await fetchNews();
 
     expect(articles).toEqual([]);
+  });
+
+  it("filters out articles without relevant keywords", async () => {
+    mockParseString.mockResolvedValue(
+      makeFeedResult([
+        {
+          title: "Celebrity gossip and entertainment news",
+          link: "https://example.com/gossip",
+          pubDate: "2024-01-01",
+          contentSnippet: "Latest celebrity dating rumors and fashion trends.",
+        },
+      ]),
+    );
+
+    const articles = await fetchNews();
+
+    // No relevant keywords in title or summary, so all articles are filtered out
+    expect(articles).toHaveLength(0);
+  });
+
+  it("keeps articles that match relevant keywords in title", async () => {
+    mockParseString.mockResolvedValue(
+      makeFeedResult([
+        {
+          title: "Thailand floods displace thousands",
+          link: "https://example.com/flood",
+          pubDate: "2024-01-01",
+          contentSnippet: "Heavy rains cause widespread damage.",
+        },
+      ]),
+    );
+
+    const articles = await fetchNews();
+
+    // "Thailand" and "flood" are relevant keywords
+    expect(articles).toHaveLength(8);
+    expect(articles[0].title).toBe("Thailand floods displace thousands");
+  });
+
+  it("keeps articles that match region keywords in summary only", async () => {
+    mockParseString.mockResolvedValue(
+      makeFeedResult([
+        {
+          title: "Breaking: Major event unfolds",
+          link: "https://example.com/event",
+          pubDate: "2024-01-01",
+          contentSnippet: "The earthquake struck near Bangkok at 3am.",
+        },
+      ]),
+    );
+
+    const articles = await fetchNews();
+
+    // "Bangkok" is a region keyword in the summary
+    expect(articles).toHaveLength(8);
   });
 });

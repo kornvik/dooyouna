@@ -6,6 +6,8 @@ import { fetchWeather } from "@/lib/fetchers/weather";
 import { fetchNews } from "@/lib/fetchers/news";
 import { fetchAirQuality } from "@/lib/fetchers/airQuality";
 import { fetchFlood } from "@/lib/fetchers/flood";
+import { fetchEconomic } from "@/lib/fetchers/economic";
+import { fetchShips } from "@/lib/fetchers/ships";
 
 const FETCHERS: Record<string, { fn: () => Promise<unknown>; revalidate: number }> = {
   flights:     { fn: fetchFlights,      revalidate: 60 },
@@ -15,6 +17,8 @@ const FETCHERS: Record<string, { fn: () => Promise<unknown>; revalidate: number 
   news:        { fn: fetchNews,         revalidate: 1800 },
   air_quality: { fn: fetchAirQuality,   revalidate: 1800 },
   flood:       { fn: fetchFlood,        revalidate: 1800 },
+  economic:    { fn: fetchEconomic,     revalidate: 1800 },
+  ships:       { fn: fetchShips,        revalidate: 1800 },
 };
 
 export async function GET(

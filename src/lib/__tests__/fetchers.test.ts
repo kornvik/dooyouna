@@ -77,7 +77,7 @@ describe("fetchFires", () => {
 
     const result = await fetchFires();
 
-    expect(result).toHaveLength(2000);
+    expect(result).toHaveLength(2500);
     // Should be sorted descending so first item has highest frp
     expect(result[0].frp).toBe(2499);
   });

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   POPUP_CONFIG,
   formatFlight,
+  formatDomestic,
   formatMilitary,
   formatPrivate,
   formatEarthquake,
@@ -251,5 +252,44 @@ describe("formatFlood", () => {
       datetime: "",
     });
     expect(html).toContain("สถานีทดสอบ");
+  });
+});
+
+describe("formatDomestic", () => {
+  it("renders with green color #00ff88", () => {
+    const html = formatDomestic({
+      callsign: "THA123",
+      type: "B737",
+      registration: "HS-ABC",
+      alt: 35000,
+      speed: 450,
+      heading: 270,
+    });
+    expect(html).toContain("#00ff88");
+  });
+
+  it("shows callsign", () => {
+    const html = formatDomestic({
+      callsign: "NOK456",
+      alt: 30000,
+      speed: 400,
+      heading: 90,
+    });
+    expect(html).toContain("NOK456");
+  });
+
+  it("shows metric units", () => {
+    const html = formatDomestic({
+      callsign: "AIQ789",
+      alt: 35000,
+      speed: 450,
+      heading: 180,
+    });
+    // altitude in meters (35000 ft -> 10668 m)
+    expect(html).toContain("10,668");
+    expect(html).toContain("ม.");
+    // speed in km/h (450 kts -> 833 km/h)
+    expect(html).toContain("833");
+    expect(html).toContain("กม./ชม.");
   });
 });

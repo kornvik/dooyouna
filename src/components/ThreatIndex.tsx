@@ -138,10 +138,7 @@ export default function ThreatIndex({ fastData, slowData }: ThreatIndexProps) {
     // --- Flood (0-100) ---
     const floodStations = slowData?.flood || [];
     const criticalFloods = floodStations.filter((s) => s.critical);
-    const floodScore = Math.min(
-      100,
-      criticalFloods.length * 8 + floodStations.length * 2
-    );
+    const floodScore = Math.min(100, criticalFloods.length * 10);
     const floodSig: ThreatSignal = {
       label: "น้ำท่วม",
       score: Math.round(floodScore),

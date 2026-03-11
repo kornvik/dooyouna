@@ -7,10 +7,11 @@ import type { FastData, LayerName, SlowData } from "@/types";
 import { fetchRegionDossier } from "@/lib/api";
 import {
   POPUP_CONFIG,
-  formatFlight, formatMilitary, formatPrivate,
+  formatFlight, formatDomestic, formatMilitary, formatPrivate,
   formatEarthquake, formatAirQuality, formatShip,
   formatFlood,
 } from "@/lib/popupFormatters";
+import { getVipLabel } from "@/lib/vipWatchlist";
 
 interface MapViewerProps {
   fastData: FastData | null;
@@ -323,7 +324,8 @@ export default function MapViewer({
     map.on("load", () => {
       // Create all icons via canvas
       const planeIcons: [string, string][] = [
-        ["plane-commercial", "#00d4ff"],
+        ["plane-domestic", "#00ff88"],
+        ["plane-international", "#00d4ff"],
         ["plane-military", "#ffdd00"],
         ["plane-private", "#ff8800"],
       ];
@@ -511,7 +513,8 @@ export default function MapViewer({
 function setupLayers(map: maplibregl.Map) {
   // Non-clustered GeoJSON sources
   const plainSources = [
-    "flights",
+    "domestic-flights",
+    "international-flights",
     "military-flights",
     "private-flights",
     "earthquakes",
@@ -556,11 +559,25 @@ function setupLayers(map: maplibregl.Map) {
 
   // --- Flight layers (symbol with plane icon, rotated by heading) ---
   map.addLayer({
-    id: "flights-layer",
+    id: "domestic-flights-layer",
     type: "symbol",
-    source: "flights",
+    source: "domestic-flights",
     layout: {
-      "icon-image": "plane-commercial",
+      "icon-image": "plane-domestic",
+      "icon-size": 0.7,
+      "icon-rotate": ["get", "heading"],
+      "icon-rotation-alignment": "map",
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+    },
+  });
+
+  map.addLayer({
+    id: "international-flights-layer",
+    type: "symbol",
+    source: "international-flights",
+    layout: {
+      "icon-image": "plane-international",
       "icon-size": 0.7,
       "icon-rotate": ["get", "heading"],
       "icon-rotation-alignment": "map",
@@ -594,6 +611,15 @@ function setupLayers(map: maplibregl.Map) {
       "icon-rotation-alignment": "map",
       "icon-allow-overlap": true,
       "icon-ignore-placement": true,
+      "text-field": ["get", "vipLabel"],
+      "text-size": 9,
+      "text-offset": [0, -1.5],
+      "text-allow-overlap": true,
+    },
+    paint: {
+      "text-color": "#ff8800",
+      "text-halo-color": "rgba(0,0,0,0.8)",
+      "text-halo-width": 1,
     },
   });
 
@@ -848,9 +874,11 @@ function setupLayers(map: maplibregl.Map) {
     });
   };
 
-  addPopup("flights-layer", formatFlight);
+  addPopup("domestic-flights-layer", formatDomestic);
+  addPopup("international-flights-layer", formatFlight);
   addPopup("military-flights-layer", formatMilitary);
   addPopup("private-flights-layer", formatPrivate);
+
   addPopup("earthquakes-layer", formatEarthquake);
   addPopup("air-quality-layer", formatAirQuality);
   addPopup("ships-layer", formatShip);
@@ -889,13 +917,20 @@ function updateMapData(
 
   // Fast data
   if (fastData?.flights) {
-    setSourceData("flights", toFeatures(fastData.flights.commercial || []));
+    setSourceData("domestic-flights", toFeatures(fastData.flights.domestic || []));
+    setSourceData("international-flights", toFeatures(fastData.flights.international || []));
     const allMil = [
       ...(fastData.flights.military || []),
       ...(fastData.military_flights || []),
     ];
     setSourceData("military-flights", toFeatures(allMil));
-    setSourceData("private-flights", toFeatures(fastData.flights.private || []));
+    // Private flights with VIP labels
+    const privateFeatures = toFeatures(fastData.flights.private || []).map(f => {
+      const label = getVipLabel(String(f.properties?.registration || ""));
+      if (label) f.properties = { ...f.properties, vipLabel: label };
+      return f;
+    });
+    setSourceData("private-flights", privateFeatures);
   }
 
   // Slow data
@@ -909,7 +944,8 @@ function updateMapData(
 
   // Layer visibility
   const layerMap: Record<LayerName, string[]> = {
-    commercial: ["flights-layer"],
+    domestic: ["domestic-flights-layer"],
+    international: ["international-flights-layer"],
     military: ["military-flights-layer"],
     private: ["private-flights-layer"],
     ships: ["ships-layer"],

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import LayerPanel from "@/components/LayerPanel";
 import NewsFeed from "@/components/NewsFeed";
 import ThreatIndex from "@/components/ThreatIndex";
+import EconomicPanel from "@/components/EconomicPanel";
 import { fetchSource } from "@/lib/api";
 import type { FastData, LayerName, SlowData } from "@/types";
 
@@ -32,7 +33,8 @@ const MapViewer = dynamic(() => import("@/components/MapViewer"), {
 });
 
 const DEFAULT_LAYERS: LayerName[] = [
-  "commercial",
+  "domestic",
+  "international",
   "military",
   "fires",
   "airQuality",
@@ -71,7 +73,7 @@ export default function HomePage() {
         const data = await fetchSource("flights");
         if (!mounted || !data) return;
         setFastData({
-          flights: data.flights || { commercial: [], military: [], private: [], total: 0 },
+          flights: data.flights || { domestic: [], international: [], military: [], private: [], total: 0 },
           military_flights: data.military_flights || [],
           updated: {},
         });
@@ -85,7 +87,7 @@ export default function HomePage() {
 
     // Slow sources: each fetches independently, polls every 120s
     const slowSources = [
-      "earthquakes", "fires", "weather", "news", "air_quality", "flood",
+      "earthquakes", "fires", "weather", "news", "air_quality", "flood", "ships",
     ] as const;
 
     for (const source of slowSources) {
@@ -109,10 +111,8 @@ export default function HomePage() {
   }, []);
 
   // Count totals
-  const totalFlights =
-    (fastData?.flights?.commercial?.length || 0) +
+  const militaryCount =
     (fastData?.flights?.military?.length || 0) +
-    (fastData?.flights?.private?.length || 0) +
     (fastData?.military_flights?.length || 0);
 
   return (
@@ -158,7 +158,9 @@ export default function HomePage() {
           {/* Stats */}
           <div className="flex items-center gap-3 text-[var(--text-secondary)]">
             <span>
-              <span className="text-[#00d4ff]">{totalFlights}</span> เครื่องบิน
+              <span className="text-[#00ff88]">{fastData?.flights?.domestic?.length || 0}</span> ใน /{" "}
+              <span className="text-[#00d4ff]">{fastData?.flights?.international?.length || 0}</span> นอก /{" "}
+              <span className="text-[#ffdd00]">{militaryCount}</span> ทหาร
             </span>
             <span>
               <span className="text-[#ff4400]">
@@ -195,6 +197,11 @@ export default function HomePage() {
           articles={slowData?.news || []}
           visible={activeLayers.has("news")}
         />
+      </div>
+
+      {/* Bottom right: economic panel */}
+      <div className="absolute bottom-20 right-3 z-20">
+        <EconomicPanel />
       </div>
 
       {/* Bottom left: threat index */}

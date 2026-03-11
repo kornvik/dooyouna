@@ -14,7 +14,8 @@ export interface Aircraft {
 }
 
 export interface FlightData {
-  commercial: Aircraft[];
+  domestic: Aircraft[];
+  international: Aircraft[];
   military: Aircraft[];
   private: Aircraft[];
   total: number;
@@ -136,8 +137,16 @@ export interface RegionDossier {
   wikipedia?: WikipediaSummary | null;
 }
 
+export interface EconomicData {
+  set?: { price: number; change: number; changePercent: number };
+  usdThb?: { rate: number };
+  gold?: { barSell: number; change: number };
+  updatedAt: string;
+}
+
 export type LayerName =
-  | "commercial"
+  | "domestic"
+  | "international"
   | "military"
   | "private"
   | "ships"

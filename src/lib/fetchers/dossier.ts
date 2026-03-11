@@ -136,6 +136,35 @@ async function fetchWikipedia(
   }
 }
 
+/** Check if a Wikipedia article is just a generic country-level description */
+function isGenericCountryArticle(wiki: WikipediaSummary, country: string): boolean {
+  if (!wiki.extract || !country) return false;
+
+  const countryNames = [
+    country.toLowerCase(),
+    // Common country name variants
+    "kingdom of thailand", "republic of the union of myanmar",
+    "kingdom of cambodia",
+  ];
+
+  // If the title matches the country name, it's generic
+  const titleLower = wiki.title.toLowerCase();
+  if (countryNames.some(cn => titleLower === cn)) return true;
+
+  // If the extract starts with "[Country], officially the..." it's the generic country article
+  const extractLower = wiki.extract.toLowerCase();
+  if (extractLower.includes("officially the kingdom of") ||
+      extractLower.includes("officially the republic of") ||
+      extractLower.includes("officially known as") ||
+      extractLower.includes("is a country in") ||
+      extractLower.includes("is a country located in")) {
+    // But only filter if it's about the SAME country we're in
+    if (countryNames.some(cn => extractLower.includes(cn))) return true;
+  }
+
+  return false;
+}
+
 export async function fetchRegionDossier(
   lat: number,
   lon: number,
@@ -154,15 +183,22 @@ export async function fetchRegionDossier(
   result.country_code = geo.country_code;
 
   // Step 2: Fetch country info and Wikipedia in parallel
-  const wikiName = geo.city || geo.state || geo.country;
+  // For Wikipedia, prefer specific locations; skip if only country-level
+  const wikiName = geo.city || geo.state || "";
 
   const [countryInfo, wikipedia] = await Promise.all([
     fetchCountryInfo(geo.country_code),
-    fetchWikipedia(wikiName),
+    wikiName ? fetchWikipedia(wikiName) : Promise.resolve(null),
   ]);
 
   if (countryInfo) result.country_info = countryInfo;
-  result.wikipedia = wikipedia;
+
+  // Only include Wikipedia if the extract is NOT just a generic country description
+  if (wikipedia && !isGenericCountryArticle(wikipedia, geo.country)) {
+    result.wikipedia = wikipedia;
+  } else {
+    result.wikipedia = null;
+  }
 
   return result;
 }

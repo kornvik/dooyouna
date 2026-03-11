@@ -10,7 +10,7 @@ const REGION_BBOX = {
   maxLon: 107.7,
 };
 
-const MAX_RESULTS = 2000;
+const MAX_RESULTS = 5000;
 
 function parseCsvLine(line: string): string[] {
   return line.split(",");

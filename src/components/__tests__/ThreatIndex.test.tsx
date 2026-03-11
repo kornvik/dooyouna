@@ -20,7 +20,8 @@ import type { FastData, SlowData } from "@/types";
 function makeFastData(overrides: Partial<FastData> = {}): FastData {
   return {
     flights: {
-      commercial: [],
+      domestic: [],
+      international: [],
       military: [],
       private: [],
       total: 0,
@@ -92,7 +93,7 @@ function calcNaturalScore(params: {
       ? 0
       : Math.max(0, Math.round(Math.min(100, (params.maxMag - 2) * 25)));
   const floodScore = Math.round(
-    Math.min(100, params.criticalFloods * 8 + params.floodStations * 2)
+    Math.min(100, params.criticalFloods * 10)
   );
   const pm25Score = Math.round(
     Math.min(100, Math.max(0, (params.avgPm25 - 15) * 1.5))
@@ -207,7 +208,8 @@ describe("ThreatIndex - Critical scenario", () => {
 
     const fastData = makeFastData({
       flights: {
-        commercial: [],
+        domestic: [],
+        international: [],
         military: milAircraft.slice(0, 5),
         private: [],
         total: 5,
@@ -309,7 +311,8 @@ describe("ThreatIndex - Critical scenario", () => {
 
     const fastData = makeFastData({
       flights: {
-        commercial: [],
+        domestic: [],
+        international: [],
         military: milAircraft,
         private: [],
         total: 20,

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchFlights } from "./flights";
+import { fetchFlights, isDomestic } from "./flights";
+import type { Aircraft } from "@/types";
 
 const mockRegionalResponse = {
   ac: [
@@ -101,14 +102,57 @@ beforeEach(() => {
   vi.restoreAllMocks();
 });
 
+function makeAircraft(overrides: Partial<Aircraft> = {}): Aircraft {
+  return {
+    hex: "test",
+    callsign: "",
+    lat: 13.5,
+    lon: 100.5,
+    alt: 35000,
+    speed: 450,
+    heading: 180,
+    squawk: "",
+    type: "B738",
+    registration: "",
+    ...overrides,
+  };
+}
+
+describe("isDomestic", () => {
+  it("returns true for HS- prefix registration", () => {
+    expect(isDomestic(makeAircraft({ registration: "HS-TKA" }))).toBe(true);
+  });
+
+  it("returns true for THA callsign prefix", () => {
+    expect(isDomestic(makeAircraft({ callsign: "THA101" }))).toBe(true);
+  });
+
+  it("returns true for AIQ callsign prefix", () => {
+    expect(isDomestic(makeAircraft({ callsign: "AIQ320" }))).toBe(true);
+  });
+
+  it("returns true for NOK callsign prefix", () => {
+    expect(isDomestic(makeAircraft({ callsign: "NOK456" }))).toBe(true);
+  });
+
+  it("returns false for foreign aircraft", () => {
+    expect(isDomestic(makeAircraft({ registration: "9V-SMA", callsign: "SIA321" }))).toBe(false);
+  });
+
+  it("returns false for empty callsign and registration", () => {
+    expect(isDomestic(makeAircraft({ callsign: "", registration: "" }))).toBe(false);
+  });
+});
+
 describe("fetchFlights", () => {
-  it("classifies commercial, military, and private aircraft correctly", async () => {
+  it("classifies domestic, international, military, and private aircraft correctly", async () => {
     vi.stubGlobal("fetch", createFetchMock());
 
     const result = await fetchFlights();
 
-    expect(result.flights.commercial).toHaveLength(1);
-    expect(result.flights.commercial[0].hex).toBe("abc123");
+    // HS-TKA registration -> domestic
+    expect(result.flights.domestic).toHaveLength(1);
+    expect(result.flights.domestic[0].hex).toBe("abc123");
 
     expect(result.flights.military).toHaveLength(1);
     expect(result.flights.military[0].hex).toBe("mil001");
@@ -135,7 +179,7 @@ describe("fetchFlights", () => {
 
     const result = await fetchFlights();
 
-    expect(result.flights.commercial[0].callsign).toBe("THA101");
+    expect(result.flights.domestic[0].callsign).toBe("THA101");
     expect(result.flights.military[0].callsign).toBe("RTAF01");
   });
 
@@ -158,7 +202,7 @@ describe("fetchFlights", () => {
     const result = await fetchFlights();
 
     expect(result.flights.total).toBe(1);
-    expect(result.flights.commercial[0].hex).toBe("has_pos");
+    expect(result.flights.international[0].hex).toBe("has_pos");
   });
 
   it("handles empty response gracefully", async () => {
@@ -166,7 +210,8 @@ describe("fetchFlights", () => {
 
     const result = await fetchFlights();
 
-    expect(result.flights.commercial).toHaveLength(0);
+    expect(result.flights.domestic).toHaveLength(0);
+    expect(result.flights.international).toHaveLength(0);
     expect(result.flights.military).toHaveLength(0);
     expect(result.flights.private).toHaveLength(0);
     expect(result.flights.total).toBe(0);
@@ -271,7 +316,8 @@ describe("fetchFlights", () => {
     const result = await fetchFlights();
 
     expect(result.flights.private).toHaveLength(privateTypes.length);
-    expect(result.flights.commercial).toHaveLength(0);
+    expect(result.flights.domestic).toHaveLength(0);
+    expect(result.flights.international).toHaveLength(0);
     expect(result.flights.military).toHaveLength(0);
   });
 
@@ -298,6 +344,66 @@ describe("fetchFlights", () => {
     expect(result.flights.private).toHaveLength(0);
   });
 
+  it("deduplicates military flights that appear in both regional and global feeds", async () => {
+    const dupeHex = "mil001";
+    const regionalWithMil = {
+      ac: [
+        {
+          hex: dupeHex,
+          flight: "RTAF01 ",
+          lat: 14.0,
+          lon: 101.0,
+          alt_baro: 20000,
+          gs: 300,
+          track: 90,
+          t: "F16",
+          r: "RTAF-001",
+          dbFlags: 1,
+        },
+      ],
+    };
+    const globalWithSameMil = {
+      ac: [
+        {
+          hex: dupeHex,
+          flight: "RTAF01",
+          lat: 14.0,
+          lon: 101.0,
+          alt_baro: 20000,
+          gs: 300,
+          track: 90,
+          t: "F16",
+          r: "RTAF-001",
+          dbFlags: 1,
+        },
+        {
+          hex: "unique_mil",
+          flight: "FORTE10",
+          lat: 10.0,
+          lon: 100.0,
+          alt_baro: 55000,
+          gs: 350,
+          track: 45,
+          t: "GLHK",
+          r: "AF-001",
+          dbFlags: 1,
+        },
+      ],
+    };
+
+    vi.stubGlobal("fetch", createFetchMock(regionalWithMil, globalWithSameMil));
+
+    const result = await fetchFlights();
+
+    // mil001 should be in flights.military from regional
+    expect(result.flights.military).toHaveLength(1);
+    expect(result.flights.military[0].hex).toBe(dupeHex);
+
+    // military_flights should only have unique_mil (not the duplicate)
+    expect(result.military_flights).toHaveLength(1);
+    expect(result.military_flights[0].hex).toBe("unique_mil");
+  });
+
   it("handles non-numeric alt_baro", async () => {
     const response = {
       ac: [
@@ -317,6 +423,32 @@ describe("fetchFlights", () => {
 
     const result = await fetchFlights();
 
-    expect(result.flights.commercial[0].alt).toBe(0);
+    expect(result.flights.international[0].alt).toBe(0);
+  });
+
+  it("classifies T7-GTS as private (not separate VIP)", async () => {
+    const response = {
+      ac: [
+        {
+          hex: "vip001",
+          flight: "GTS01  ",
+          lat: 13.5,
+          lon: 100.5,
+          alt_baro: 45000,
+          gs: 500,
+          track: 90,
+          t: "GL7T",
+          r: "T7-GTS",
+          dbFlags: 0,
+        },
+      ],
+    };
+
+    vi.stubGlobal("fetch", createFetchMock(response, { ac: [] }));
+
+    const result = await fetchFlights();
+
+    expect(result.flights.private).toHaveLength(1);
+    expect(result.flights.private[0].registration).toBe("T7-GTS");
   });
 });

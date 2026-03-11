@@ -31,6 +31,17 @@ export function formatFlight(p: Props): string {
   </div>`;
 }
 
+export function formatDomestic(p: Props): string {
+  const altM = ftToM(Number(p.alt));
+  const spdKmh = ktsToKmh(Number(p.speed));
+  return `<div ${POPUP_STYLE}>
+    <div style="color:#00ff88;font-weight:bold;">${p.callsign || "ไม่ทราบ"}</div>
+    <div>ประเภท: ${p.type || "N/A"} | ทะเบียน: ${p.registration || "N/A"}</div>
+    <div>ระดับ: ${altM.toLocaleString()} ม. | ความเร็ว: ${spdKmh} กม./ชม.</div>
+    <div>ทิศทาง: ${p.heading}&deg;</div>
+  </div>`;
+}
+
 export function formatMilitary(p: Props): string {
   const altM = ftToM(Number(p.alt));
   const spdKmh = ktsToKmh(Number(p.speed));

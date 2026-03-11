@@ -106,12 +106,23 @@ export default function LayerPanel({
           เที่ยวบิน
         </div>
         <LayerItem
-          name="commercial"
-          label="พาณิชย์"
+          name="domestic"
+          label="ในประเทศ"
           icon={<Plane size={13} />}
-          count={flights?.commercial?.length}
+          count={flights?.domestic?.length}
           loading={!fastData}
-          active={activeLayers.has("commercial")}
+          active={activeLayers.has("domestic")}
+          color="#00ff88"
+          source="ADS-B Exchange / OpenSky"
+          onToggle={onToggle}
+        />
+        <LayerItem
+          name="international"
+          label="ระหว่างประเทศ"
+          icon={<Plane size={13} />}
+          count={flights?.international?.length}
+          loading={!fastData}
+          active={activeLayers.has("international")}
           color="#00d4ff"
           source="ADS-B Exchange / OpenSky"
           onToggle={onToggle}

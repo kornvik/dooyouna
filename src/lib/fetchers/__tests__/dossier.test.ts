@@ -240,7 +240,7 @@ describe("fetchRegionDossier", () => {
     expect(result.country_info!.name).toBe("Thailand");
   });
 
-  it("falls back to country name for Wikipedia when city is empty", async () => {
+  it("skips Wikipedia when only country-level location available", async () => {
     setupFetchMock({
       geo: {
         display_name: "Middle of nowhere",
@@ -252,13 +252,64 @@ describe("fetchRegionDossier", () => {
     });
     const fetchSpy = vi.mocked(global.fetch);
 
-    await fetchRegionDossier(10.0, 100.0);
+    const result = await fetchRegionDossier(10.0, 100.0);
 
-    // Wikipedia call should use "Thailand" as the search term
+    // Wikipedia should NOT be called at all
     const wikiCall = fetchSpy.mock.calls.find(
       (c) => (c[0] as string).includes("wikipedia"),
     );
-    expect(wikiCall).toBeDefined();
-    expect(wikiCall![0]).toContain("Thailand");
+    expect(wikiCall).toBeUndefined();
+    expect(result.wikipedia).toBeNull();
+  });
+
+  it("filters out generic country Wikipedia article", async () => {
+    setupFetchMock({
+      geo: {
+        display_name: "Ban Huai Pong, Thailand",
+        address: {
+          village: "Ban Huai Pong",
+          state: "Kanchanaburi",
+          country: "Thailand",
+          country_code: "th",
+        },
+      },
+      wiki: {
+        title: "Thailand",
+        extract:
+          "Thailand, officially the Kingdom of Thailand, is a country in Southeast Asia.",
+        thumbnail: { source: "https://upload.example.com/thailand.jpg" },
+      },
+    });
+
+    const result = await fetchRegionDossier(14.0, 99.5);
+
+    // Generic Thailand article should be filtered out
+    expect(result.wikipedia).toBeNull();
+  });
+
+  it("keeps specific city Wikipedia article", async () => {
+    setupFetchMock({
+      geo: {
+        display_name: "Chiang Mai, Thailand",
+        address: {
+          city: "Chiang Mai",
+          state: "Chiang Mai",
+          country: "Thailand",
+          country_code: "th",
+        },
+      },
+      wiki: {
+        title: "Chiang Mai",
+        extract:
+          "Chiang Mai is a city in mountainous northern Thailand.",
+        thumbnail: { source: "https://upload.example.com/chiangmai.jpg" },
+      },
+    });
+
+    const result = await fetchRegionDossier(18.8, 98.98);
+
+    expect(result.wikipedia).toBeDefined();
+    expect(result.wikipedia!.title).toBe("Chiang Mai");
+    expect(result.wikipedia!.extract).toContain("Chiang Mai");
   });
 });

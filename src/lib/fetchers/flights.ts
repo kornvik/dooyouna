@@ -1,7 +1,6 @@
 import type { Aircraft, FlightData } from "@/types";
-
 const ADSB_REGIONAL_URL =
-  "https://api.adsb.lol/v2/lat/13.5/lon/102.5/dist/500";
+  "https://api.adsb.lol/v2/lat/13.5/lon/102.5/dist/800";
 const ADSB_MIL_URL = "https://api.adsb.lol/v2/mil";
 const FETCH_TIMEOUT_MS = 15_000;
 const USER_AGENT = "DooYouNa-OSINT/1.0";
@@ -86,23 +85,37 @@ function isPrivate(ac: Aircraft): boolean {
   return PRIVATE_TYPES.has(ac.type);
 }
 
+const THAI_ICAO_CODES = new Set([
+  "THA", "AIQ", "NOK", "TDM", "BKP", "SLC", "TVJ",
+]);
+
+export function isDomestic(ac: Aircraft): boolean {
+  if (ac.registration.startsWith("HS-")) return true;
+  const prefix = ac.callsign.slice(0, 3);
+  return prefix.length === 3 && THAI_ICAO_CODES.has(prefix);
+}
+
 function classifyFlights(aircraft: Aircraft[]): FlightData {
   const military: Aircraft[] = [];
   const privateJets: Aircraft[] = [];
-  const commercial: Aircraft[] = [];
+  const domestic: Aircraft[] = [];
+  const international: Aircraft[] = [];
 
   for (const ac of aircraft) {
     if (isMilitary(ac)) {
       military.push(ac);
     } else if (isPrivate(ac)) {
       privateJets.push(ac);
+    } else if (isDomestic(ac)) {
+      domestic.push(ac);
     } else {
-      commercial.push(ac);
+      international.push(ac);
     }
   }
 
   return {
-    commercial,
+    domestic,
+    international,
     military,
     private: privateJets,
     total: aircraft.length,
@@ -151,11 +164,17 @@ export async function fetchFlights(): Promise<{
     const globalMilAircraft = mapToAircraft(milData.ac);
     const militaryFlights = globalMilAircraft.filter(isInBbox);
 
-    return { flights, military_flights: militaryFlights };
+    // Deduplicate: remove global military aircraft already present in regional feed
+    const regionalMilHexes = new Set(flights.military.map((ac) => ac.hex));
+    const uniqueGlobalMil = militaryFlights.filter(
+      (ac) => !regionalMilHexes.has(ac.hex),
+    );
+
+    return { flights, military_flights: uniqueGlobalMil };
   } catch (err) {
     console.error("fetchFlights failed:", err);
     return {
-      flights: { commercial: [], military: [], private: [], total: 0 },
+      flights: { domestic: [], international: [], military: [], private: [], total: 0 },
       military_flights: [],
     };
   }
