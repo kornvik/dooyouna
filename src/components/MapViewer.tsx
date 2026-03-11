@@ -208,6 +208,37 @@ function createAQCloudIcon(level: "good" | "moderate" | "bad" | "hazardous", siz
   return { width: size, height: size, data: imageData.data };
 }
 
+// Wind arrow icon
+function createWindArrowIcon(size = 32): { width: number; height: number; data: Uint8ClampedArray } {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const s = size;
+
+  ctx.strokeStyle = "#aabbcc";
+  ctx.fillStyle = "#aabbcc";
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+
+  // Arrow shaft (points up = 0°, will be rotated by wind direction)
+  ctx.beginPath();
+  ctx.moveTo(s * 0.5, s * 0.15);
+  ctx.lineTo(s * 0.5, s * 0.85);
+  ctx.stroke();
+
+  // Arrowhead
+  ctx.beginPath();
+  ctx.moveTo(s * 0.5, s * 0.15);
+  ctx.lineTo(s * 0.35, s * 0.35);
+  ctx.moveTo(s * 0.5, s * 0.15);
+  ctx.lineTo(s * 0.65, s * 0.35);
+  ctx.stroke();
+
+  const imageData = ctx.getImageData(0, 0, size, size);
+  return { width: size, height: size, data: imageData.data };
+}
+
 // -----------------------------------------------------------------------
 // Satellite flood tile pixel filter:
 // Fetches GIBS MODIS tiles, strips out brown/grey land via saturation,
@@ -374,6 +405,9 @@ export default function MapViewer({
         const name = `aq-${level}`;
         if (!map.hasImage(name)) map.addImage(name, createAQCloudIcon(level, 32), { sdf: false });
       }
+
+      // Wind arrow icon
+      if (!map.hasImage("wind-arrow")) map.addImage("wind-arrow", createWindArrowIcon(32), { sdf: false });
 
       // Thailand border highlight (high-res from OSM)
       fetch("/geo/thailand.json")
@@ -582,6 +616,7 @@ function setupLayers(map: maplibregl.Map) {
     "private-flights",
     "earthquakes",
     "ships-source",
+    "wind-source",
   ];
   for (const id of plainSources) {
     map.addSource(id, {
@@ -890,6 +925,31 @@ function setupLayers(map: maplibregl.Map) {
     },
   });
 
+  // --- Wind arrows ---
+  map.addLayer({
+    id: "wind-layer",
+    type: "symbol",
+    source: "wind-source",
+    layout: {
+      "icon-image": "wind-arrow",
+      "icon-size": 0.9,
+      // Wind direction is where wind comes FROM, arrow shows where it goes TO
+      "icon-rotate": ["get", "direction"],
+      "icon-rotation-alignment": "map",
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+      "text-field": ["concat", ["to-string", ["round", ["get", "speed"]]], " km/h"],
+      "text-size": 9,
+      "text-offset": [0, 1.8],
+      "text-allow-overlap": true,
+    },
+    paint: {
+      "text-color": "#aabbcc",
+      "text-halo-color": "rgba(0,0,0,0.7)",
+      "text-halo-width": 1,
+    },
+  });
+
   // --- Cluster click-to-zoom ---
   for (const clusterId of ["fires-cluster", "air-quality-cluster", "flood-cluster"]) {
     const sourceId = clusterId === "fires-cluster" ? "fires"
@@ -1003,6 +1063,7 @@ function updateMapData(
     setSourceData("air-quality", toFeatures(slowData.air_quality || []));
     setSourceData("ships-source", toFeatures(slowData.ships || []));
     setSourceData("flood-source", toFeatures(slowData.flood || []));
+    setSourceData("wind-source", toFeatures(slowData.wind || []));
   }
 
   // Layer visibility
@@ -1018,6 +1079,7 @@ function updateMapData(
     news: [],
     airQuality: ["air-quality-cluster", "air-quality-layer"],
     flood: ["flood-layer", "flood-cluster"],
+    wind: ["wind-layer"],
     floodSatellite: [], // managed as raster in separate useEffect
     nightLights: [], // managed as raster in separate useEffect
   };

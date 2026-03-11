@@ -5,12 +5,13 @@ import { fetchWeather } from "@/lib/fetchers/weather";
 import { fetchNews } from "@/lib/fetchers/news";
 import { fetchAirQuality } from "@/lib/fetchers/airQuality";
 import { fetchFlood } from "@/lib/fetchers/flood";
+import { fetchWind } from "@/lib/fetchers/wind";
 
 export const revalidate = 1800;
 
 export async function GET() {
   try {
-    const [earthquakes, fires, weather, news, air_quality, flood] =
+    const [earthquakes, fires, weather, news, air_quality, flood, wind] =
       await Promise.all([
         fetchEarthquakes(),
         fetchFires(),
@@ -18,6 +19,7 @@ export async function GET() {
         fetchNews(),
         fetchAirQuality(),
         fetchFlood(),
+        fetchWind(),
       ]);
 
     const now = new Date().toISOString();
@@ -30,6 +32,7 @@ export async function GET() {
       air_quality,
       ships: [],
       flood,
+      wind,
       updated: {
         earthquakes: now,
         fires: now,
@@ -37,6 +40,7 @@ export async function GET() {
         news: now,
         air_quality: now,
         flood: now,
+        wind: now,
       },
     });
   } catch (err) {

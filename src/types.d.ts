@@ -95,6 +95,13 @@ export interface FloodStation {
   critical: boolean;
 }
 
+export interface WindPoint {
+  lat: number;
+  lon: number;
+  speed: number;
+  direction: number;
+}
+
 export interface SlowData {
   earthquakes: Earthquake[];
   fires: FireHotspot[];
@@ -103,6 +110,7 @@ export interface SlowData {
   air_quality: AirQuality[];
   ships: Ship[];
   flood: FloodStation[];
+  wind: WindPoint[];
   updated: Record<string, string>;
 }
 
@@ -157,4 +165,5 @@ export type LayerName =
   | "airQuality"
   | "flood"
   | "floodSatellite"
-  | "nightLights";
+  | "nightLights"
+  | "wind";

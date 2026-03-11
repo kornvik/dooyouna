@@ -27,7 +27,6 @@ function makeFastData(overrides: Partial<FastData> = {}): FastData {
       total: 0,
     },
     military_flights: [],
-    cctv: [],
     updated: {},
     ...overrides,
   };
@@ -42,6 +41,7 @@ function makeSlowData(overrides: Partial<SlowData> = {}): SlowData {
     air_quality: [],
     ships: [],
     flood: [],
+    wind: [],
     updated: {},
     ...overrides,
   };

@@ -16,7 +16,9 @@ interface AQILast {
 
 interface Air4ThaiStation {
   stationID: string;
+  nameTH: string;
   nameEN: string;
+  areaTH: string;
   areaEN: string;
   stationType: string;
   lat: string;
@@ -62,8 +64,8 @@ export async function fetchAirQuality(): Promise<AirQuality[]> {
         const lastUpdated = `${aqiLast.date ?? ""} ${aqiLast.time ?? ""}`;
 
         result.push({
-          location: stn.nameEN ?? "",
-          city: stn.areaEN ?? "",
+          location: stn.nameTH ?? stn.nameEN ?? "",
+          city: stn.areaTH ?? stn.areaEN ?? "",
           country: "TH",
           lat,
           lon,

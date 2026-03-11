@@ -15,6 +15,7 @@ import {
   Satellite,
   Info,
   Sun,
+  Cloud,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { ChevronDown } from "lucide-react";
@@ -239,9 +240,20 @@ export default function LayerPanel({
           onToggle={onToggle}
         />
         <LayerItem
+          name="wind"
+          label="ทิศทางลม"
+          icon={<Wind size={13} />}
+          count={slowLoaded.has("wind") ? slowData?.wind?.length : undefined}
+          loading={!slowLoaded.has("wind")}
+          active={activeLayers.has("wind")}
+          color="#aabbcc"
+          source="Open-Meteo (free)"
+          onToggle={onToggle}
+        />
+        <LayerItem
           name="airQuality"
           label="คุณภาพอากาศ PM2.5"
-          icon={<Wind size={13} />}
+          icon={<Cloud size={13} />}
           count={slowLoaded.has("air_quality") ? slowData?.air_quality?.length : undefined}
           loading={!slowLoaded.has("air_quality")}
           active={activeLayers.has("airQuality")}
