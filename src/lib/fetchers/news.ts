@@ -6,22 +6,21 @@ const FETCH_TIMEOUT_MS = 15_000;
 interface FeedConfig {
   name: string;
   url: string;
-  weight: number;
 }
 
 const FEEDS: FeedConfig[] = [
   // Thai news — reliable sources
-  { name: "Bangkok Post", url: "https://www.bangkokpost.com/rss/data/topstories.xml", weight: 5 },
-  { name: "Prachatai English", url: "https://prachataienglish.com/feed", weight: 4 },
+  { name: "Bangkok Post", url: "https://www.bangkokpost.com/rss/data/topstories.xml" },
+  { name: "Prachatai English", url: "https://prachataienglish.com/feed" },
   // Cambodia news
-  { name: "CNA Southeast Asia", url: "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=6511", weight: 4 },
+  { name: "CNA Southeast Asia", url: "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=6511" },
   // Regional security & disasters
-  { name: "GDACS Disasters", url: "https://www.gdacs.org/xml/rss.xml", weight: 5 },
+  { name: "GDACS Disasters", url: "https://www.gdacs.org/xml/rss.xml" },
   // Google News for targeted topics (more reliable than individual sites)
-  { name: "Thailand News", url: "https://news.google.com/rss/search?q=Thailand+when:3d&hl=en&gl=US&ceid=US:en", weight: 3 },
-  { name: "Cambodia News", url: "https://news.google.com/rss/search?q=Cambodia+when:3d&hl=en&gl=US&ceid=US:en", weight: 3 },
-  { name: "Myanmar News", url: "https://news.google.com/rss/search?q=Myanmar+military+OR+conflict+when:3d&hl=en&gl=US&ceid=US:en", weight: 3 },
-  { name: "SE Asia Security", url: "https://news.google.com/rss/search?q=Southeast+Asia+security+OR+military+OR+disaster+when:3d&hl=en&gl=US&ceid=US:en", weight: 2 },
+  { name: "Thailand News", url: "https://news.google.com/rss/search?q=Thailand+when:3d&hl=en&gl=US&ceid=US:en" },
+  { name: "Cambodia News", url: "https://news.google.com/rss/search?q=Cambodia+when:3d&hl=en&gl=US&ceid=US:en" },
+  { name: "Myanmar News", url: "https://news.google.com/rss/search?q=Myanmar+military+OR+conflict+when:3d&hl=en&gl=US&ceid=US:en" },
+  { name: "SE Asia Security", url: "https://news.google.com/rss/search?q=Southeast+Asia+security+OR+military+OR+disaster+when:3d&hl=en&gl=US&ceid=US:en" },
 ];
 
 const MAX_ITEMS_PER_FEED = 10;
@@ -43,9 +42,30 @@ const REGION_KEYWORDS = [
   "siem reap", "yangon", "mandalay", "hanoi", "vientiane",
 ];
 
+// Risk keywords — each match adds +2 to risk score (capped at 10)
+const RISK_KEYWORDS = [
+  "flood", "earthquake", "tsunami", "disaster", "crisis", "emergency",
+  "military", "conflict", "attack", "war", "missile", "strike",
+  "fire", "wildfire", "hotspot", "pm2.5", "pollution", "haze",
+  "explosion", "nuclear", "clash", "tension", "protest", "coup",
+  "drought", "storm", "typhoon", "cyclone", "landslide",
+];
+
+// Pre-compiled regex for each risk keyword (word-boundary match)
+const RISK_PATTERNS = RISK_KEYWORDS.map((kw) => new RegExp(`\\b${kw}\\b`, "i"));
+
+/** Calculate risk score (1–10) based on keyword matches in title + summary */
+export function calculateRiskScore(title: string, summary: string): number {
+  const text = `${title} ${summary}`;
+  let score = 1;
+  for (const pattern of RISK_PATTERNS) {
+    if (pattern.test(text)) score += 2;
+  }
+  return Math.min(score, 10);
+}
+
 function isRelevant(article: NewsArticle): boolean {
   const text = `${article.title} ${article.summary}`.toLowerCase();
-  // Must mention a place in our region
   return REGION_KEYWORDS.some(kw => text.includes(kw));
 }
 
@@ -71,14 +91,18 @@ async function parseFeed(
     const parsed = await parser.parseString(xml);
     const items = parsed.items.slice(0, MAX_ITEMS_PER_FEED);
 
-    return items.map((entry) => ({
-      title: entry.title ?? "",
-      link: entry.link ?? "",
-      source: feed.name,
-      weight: feed.weight,
-      published: entry.pubDate ?? entry.isoDate ?? "",
-      summary: trimSummary(entry.contentSnippet),
-    }));
+    return items.map((entry) => {
+      const title = entry.title ?? "";
+      const summary = trimSummary(entry.contentSnippet);
+      return {
+        title,
+        link: entry.link ?? "",
+        source: feed.name,
+        weight: calculateRiskScore(title, summary),
+        published: entry.pubDate ?? entry.isoDate ?? "",
+        summary,
+      };
+    });
   } catch (err) {
     console.error(`RSS error for ${feed.name}:`, err);
     return [];
@@ -94,7 +118,7 @@ export async function fetchNews(): Promise<NewsArticle[]> {
 
   const allArticles = results.flat().filter(isRelevant);
 
-  // Sort by weight (source priority) then by date
+  // Sort by risk score (content keywords) then by date
   allArticles.sort((a, b) => {
     if (b.weight !== a.weight) return b.weight - a.weight;
     return new Date(b.published).getTime() - new Date(a.published).getTime();

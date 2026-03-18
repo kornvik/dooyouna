@@ -61,4 +61,4 @@ Center: **13.5°N, 102.5°E**
 
 ## License
 
-MIT
+AGPL-3.0

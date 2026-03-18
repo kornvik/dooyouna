@@ -8,7 +8,7 @@ vi.mock("rss-parser", () => {
 });
 
 import RSSParser from "rss-parser";
-import { fetchNews } from "../news";
+import { fetchNews, calculateRiskScore } from "../news";
 
 const mockParseString = RSSParser.prototype.parseString as ReturnType<typeof vi.fn>;
 
@@ -36,6 +36,28 @@ beforeEach(() => {
   );
 });
 
+describe("calculateRiskScore", () => {
+  it("returns 1 for articles with no risk keywords", () => {
+    expect(calculateRiskScore("Bangkok traffic report", "Roads are busy today.")).toBe(1);
+  });
+
+  it("adds 2 per keyword match", () => {
+    // "flood" = +2 → 3
+    expect(calculateRiskScore("Thailand flood warning", "")).toBe(3);
+    // "military" + "conflict" = +4 → 5
+    expect(calculateRiskScore("Military conflict in Myanmar", "")).toBe(5);
+  });
+
+  it("caps at 10", () => {
+    // flood, disaster, crisis, emergency, storm, landslide = 6 keywords * 2 = 12 + 1 = 13 → capped at 10
+    expect(calculateRiskScore("flood disaster crisis emergency storm landslide", "")).toBe(10);
+  });
+
+  it("checks both title and summary", () => {
+    expect(calculateRiskScore("Breaking news", "earthquake near Bangkok")).toBe(3);
+  });
+});
+
 describe("fetchNews", () => {
   it("returns articles mapped from all 8 feeds", async () => {
     mockParseString.mockResolvedValue(
@@ -61,19 +83,22 @@ describe("fetchNews", () => {
     });
   });
 
-  it("sorts articles by weight descending then by date", async () => {
-    // Each feed call returns 1 item with a relevant keyword
-    mockParseString.mockResolvedValue(
-      makeFeedResult([{ title: "Bangkok flood update", link: "https://x.com", pubDate: "2024-01-01" }]),
-    );
+  it("sorts articles by risk score descending then by date", async () => {
+    let callCount = 0;
+    mockParseString.mockImplementation(() => {
+      callCount++;
+      // First feed: high-risk article
+      if (callCount === 1) {
+        return makeFeedResult([{ title: "Thailand military conflict escalates", link: "https://x.com/1", pubDate: "2024-01-01" }]);
+      }
+      // Other feeds: low-risk article
+      return makeFeedResult([{ title: "Bangkok weather update", link: "https://x.com/2", pubDate: "2024-01-02" }]);
+    });
 
     const articles = await fetchNews();
 
-    // Weight 5 feeds come first, then 4, then 3, then 2
-    const weights = articles.map((a) => a.weight);
-    for (let i = 1; i < weights.length; i++) {
-      expect(weights[i]).toBeLessThanOrEqual(weights[i - 1]);
-    }
+    // "military conflict" = 1+2+2=5, "Bangkok weather" = 1 — high risk should come first
+    expect(articles[0].weight).toBeGreaterThan(articles[articles.length - 1].weight);
   });
 
   it("caps total articles at 50", async () => {
