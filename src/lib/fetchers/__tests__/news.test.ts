@@ -189,7 +189,7 @@ describe("fetchNews", () => {
     const articles = await fetchNews();
 
     const sources = articles.map((a) => a.source);
-    expect(sources).toContain("Thai PBS");
+    expect(sources).toContain("Bangkok Post");
     expect(sources).toContain("Prachatai English");
     expect(sources).toContain("CNA Southeast Asia");
     expect(sources).toContain("GDACS Disasters");

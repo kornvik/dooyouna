@@ -11,8 +11,8 @@ interface FeedConfig {
 
 const FEEDS: FeedConfig[] = [
   // Thai news — reliable sources
-  { name: "Thai PBS", url: "https://www.thaipbs.or.th/rss/news.xml", weight: 5 },
-  { name: "Prachatai English", url: "https://prachatai.com/english/feed", weight: 4 },
+  { name: "Bangkok Post", url: "https://www.bangkokpost.com/rss/data/topstories.xml", weight: 5 },
+  { name: "Prachatai English", url: "https://prachataienglish.com/feed", weight: 4 },
   // Cambodia news
   { name: "CNA Southeast Asia", url: "https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml&category=6511", weight: 4 },
   // Regional security & disasters
