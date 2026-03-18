@@ -97,7 +97,7 @@ export default function HomePage() {
 
     // Slow sources: each fetches independently, polls every 120s
     const slowSources = [
-      "earthquakes", "fires", "weather", "news", "air_quality", "flood", "ships", "wind",
+      "earthquakes", "fires", "weather", "news", "air_quality", "flood", "wind",
     ] as const;
 
     for (const source of slowSources) {
@@ -150,9 +150,9 @@ export default function HomePage() {
       )}
 
       {/* Top header bar */}
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-2">
-        <div className="flex items-center gap-3">
-          <div className="text-[var(--accent)] font-bold text-sm tracking-[0.2em] glow-text">
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-2 py-1.5 sm:px-4 sm:py-2">
+        <div className="flex items-center gap-1.5 sm:gap-3">
+          <div className="text-[var(--accent)] font-bold text-xs sm:text-sm tracking-[0.2em] glow-text">
             DOOYOUNA
           </div>
           <div className="hidden sm:block text-[10px] text-[var(--text-secondary)] tracking-wider">
@@ -167,13 +167,13 @@ export default function HomePage() {
           </Link>
           <button
             onClick={() => setShowDisclaimer(true)}
-            className="ml-1 text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+            className="ml-0.5 sm:ml-1 text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors cursor-pointer"
           >
             <Info size={12} />
           </button>
         </div>
 
-        <div className="flex items-center gap-4 text-[10px]">
+        <div className="flex items-center gap-2 sm:gap-4 text-[10px]">
           {/* Live indicator */}
           <div className="flex items-center gap-1.5">
             <div
@@ -185,7 +185,7 @@ export default function HomePage() {
                     : "bg-[var(--warning)]"
               }`}
             />
-            <span className="text-[var(--text-secondary)] uppercase">
+            <span className="hidden sm:inline text-[var(--text-secondary)] uppercase">
               {connectionStatus === "live" ? "เชื่อมต่อ" : connectionStatus === "error" ? "ผิดพลาด" : "กำลังเชื่อมต่อ"}
             </span>
           </div>
@@ -231,12 +231,21 @@ export default function HomePage() {
       >
         <Newspaper size={18} className="text-[var(--accent)]" />
       </button>
+      <Link
+        href="/trends"
+        className="sm:hidden fixed top-[6.5rem] right-3 z-20 hud-panel p-2.5"
+        aria-label="Trends"
+      >
+        <BarChart3 size={18} className="text-[var(--accent)]" />
+      </Link>
 
-      {/* Mobile drawer: Layers */}
+      {/* Mobile panel: Layers */}
       {mobilePanel === "layers" && (
-        <>
-          <div className="mobile-backdrop sm:hidden" onClick={() => setMobilePanel(null)} />
-          <div className="mobile-drawer mobile-drawer-left sm:hidden pt-12 px-3">
+        <div
+          className="sm:hidden fixed inset-0 z-30 flex items-center justify-center bg-black/50"
+          onClick={() => setMobilePanel(null)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
             <LayerPanel
               activeLayers={activeLayers}
               onToggle={handleToggle}
@@ -246,21 +255,23 @@ export default function HomePage() {
               onClose={() => setMobilePanel(null)}
             />
           </div>
-        </>
+        </div>
       )}
 
-      {/* Mobile drawer: News */}
+      {/* Mobile panel: News */}
       {mobilePanel === "news" && (
-        <>
-          <div className="mobile-backdrop sm:hidden" onClick={() => setMobilePanel(null)} />
-          <div className="mobile-drawer mobile-drawer-right sm:hidden pt-12 px-3">
+        <div
+          className="sm:hidden fixed inset-0 z-30 flex items-center justify-center bg-black/50"
+          onClick={() => setMobilePanel(null)}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
             <NewsFeed
               articles={slowData?.news || []}
               visible={activeLayers.has("news")}
               onClose={() => setMobilePanel(null)}
             />
           </div>
-        </>
+        </div>
       )}
 
       {/* Desktop: Left panel — Layer toggles */}
@@ -345,7 +356,7 @@ function DualClock() {
 
   return (
     <div className="flex gap-3 text-[10px] font-mono tracking-wider">
-      <span className="text-[var(--text-secondary)]">
+      <span className="hidden sm:inline text-[var(--text-secondary)]">
         LOCAL <span className="text-[var(--accent)]">{localTime}</span>
       </span>
       <span className="text-[var(--text-secondary)]">

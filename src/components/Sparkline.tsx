@@ -18,8 +18,8 @@ export default function Sparkline({
   if (data.length === 0) {
     return (
       <div
-        className="flex items-center justify-center text-[9px] text-[var(--text-secondary)]"
-        style={{ width, height }}
+        className="flex items-center justify-center text-[9px] text-[var(--text-secondary)] w-full"
+        style={{ height }}
       >
         ไม่มีข้อมูล
       </div>
@@ -28,7 +28,7 @@ export default function Sparkline({
 
   if (data.length === 1) {
     return (
-      <svg width={width} height={height} className="block">
+      <svg viewBox={`0 0 ${width} ${height}`} className="block w-full" style={{ height }} preserveAspectRatio="none">
         <line x1={0} y1={height / 2} x2={width} y2={height / 2} stroke={color} strokeWidth={1} strokeDasharray="4 3" opacity={0.3} />
         <circle cx={width / 2} cy={height / 2} r={4} fill={color} />
         <text x={width / 2 + 8} y={height / 2 + 3} fill={color} fontSize={10}>{data[0].toLocaleString()}</text>
@@ -52,7 +52,7 @@ export default function Sparkline({
   const fill = fillColor || color.replace(")", ",0.1)").replace("rgb", "rgba");
 
   return (
-    <svg width={width} height={height} className="block">
+    <svg viewBox={`0 0 ${width} ${height}`} className="block w-full" style={{ height }} preserveAspectRatio="none">
       <path d={fillPath} fill={fill} />
       <polyline
         points={points.join(" ")}

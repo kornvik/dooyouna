@@ -148,8 +148,11 @@ export default function ThreatIndex({ fastData, slowData, panel = "both" }: Thre
       color: signalColor(fireScore),
     };
 
-    // --- Seismic activity (0-100) ---
-    const quakes = slowData?.earthquakes || [];
+    // --- Seismic activity (0-100) — Thailand bbox only ---
+    const allQuakes = slowData?.earthquakes || [];
+    const quakes = allQuakes.filter(
+      (q) => q.lat >= 5.5 && q.lat <= 20.5 && q.lon >= 97.3 && q.lon <= 107.7
+    );
     const maxMag = quakes.reduce(
       (max, q) => Math.max(max, q.magnitude || 0),
       0

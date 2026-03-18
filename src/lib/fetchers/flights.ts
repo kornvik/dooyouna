@@ -238,11 +238,13 @@ export async function fetchFlights(): Promise<{
     ]);
 
     const regionalAircraft = mapToAircraft(regionalData.ac);
+    // Filter to Thailand bbox for accurate counts (API returns 800km radius)
+    const thaiAircraft = regionalAircraft.filter(isInBbox);
 
     // Lazy-enrich with real route data (non-blocking, fills cache over time)
-    await enrichWithRoutes(regionalAircraft);
+    await enrichWithRoutes(thaiAircraft);
 
-    const flights = classifyFlights(regionalAircraft);
+    const flights = classifyFlights(thaiAircraft);
 
     const globalMilAircraft = mapToAircraft(milData.ac);
     const militaryFlights = globalMilAircraft.filter(isInBbox);

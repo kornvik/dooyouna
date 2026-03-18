@@ -39,10 +39,10 @@ export default function NewsFeed({ articles, visible, onClose }: NewsFeedProps) 
   if (!visible) return null;
 
   return (
-    <div className="hud-panel w-[calc(100vw-3rem)] sm:w-72 flex flex-col max-h-[80vh] sm:max-h-[50vh]">
-      <button
-        onClick={() => setCollapsed((c) => !c)}
-        className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-between w-full text-left hover:bg-[rgba(0,255,136,0.03)] transition-colors cursor-pointer"
+    <div className="hud-panel w-[75vw] sm:w-72 flex flex-col max-h-[80vh] sm:max-h-[50vh]">
+      <div
+        onClick={() => { if (!onClose) setCollapsed((c) => !c); }}
+        className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-center sm:justify-between w-full relative sm:cursor-pointer"
       >
         <div className="text-[10px] tracking-widest text-[var(--accent)] glow-text">
           ฟีดข่าวกรอง
@@ -50,8 +50,11 @@ export default function NewsFeed({ articles, visible, onClose }: NewsFeedProps) 
             <span className="text-[var(--text-secondary)] ml-2">{articles.length}</span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {collapsed ? <ChevronDown size={12} className="text-[var(--text-secondary)]" /> : <ChevronUp size={12} className="text-[var(--text-secondary)]" />}
+        <div className="flex items-center gap-2 sm:static absolute right-3">
+          {collapsed
+            ? <ChevronDown size={12} className="hidden sm:block text-[var(--text-secondary)]" />
+            : <ChevronUp size={12} className="hidden sm:block text-[var(--text-secondary)]" />
+          }
           {onClose && (
             <span
               role="button"
@@ -64,7 +67,7 @@ export default function NewsFeed({ articles, visible, onClose }: NewsFeedProps) 
             </span>
           )}
         </div>
-      </button>
+      </div>
 
       {!collapsed && <div className="overflow-y-auto p-2 flex flex-col gap-1.5">
         {articles.length === 0 && (

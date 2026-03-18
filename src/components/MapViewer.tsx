@@ -23,6 +23,7 @@ interface MapViewerProps {
 
 const DEFAULT_CENTER: [number, number] = [102.5, 13.5];
 const DEFAULT_ZOOM = 5.5;
+const MAP_FONT: string[] = ["Noto Sans Regular"];
 
 // Render a plane icon to ImageData via canvas (MapLibre needs raw pixel data)
 function createPlaneImageData(
@@ -291,7 +292,7 @@ export default function MapViewer({
           },
         },
         glyphs:
-          "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
+          "https://cdn.protomaps.com/fonts/pbf/{fontstack}/{range}.pbf",
         layers: [
           {
             id: "carto-tiles",
@@ -312,6 +313,17 @@ export default function MapViewer({
     });
 
     map.addControl(new maplibregl.NavigationControl(), "bottom-right");
+
+    // Suppress non-fatal tile/font fetch errors (auto-retried by MapLibre)
+    const origError = console.error;
+    console.error = (...args: unknown[]) => {
+      const first = args[0];
+      if (first && typeof first === "object" && "message" in first && (first as { message: string }).message === "Failed to fetch") return;
+      origError.apply(console, args);
+    };
+    map.on("error", (e) => {
+      if (e?.error?.message === "Failed to fetch") return;
+    });
 
     map.on("mousemove", (e) => {
       setCursorPos({ lat: e.lngLat.lat, lng: e.lngLat.lng });
@@ -408,6 +420,7 @@ export default function MapViewer({
       map.remove();
       mapRef.current = null;
       mapLoadedRef.current = false;
+      console.error = origError;
     };
   }, []);
 
@@ -676,6 +689,7 @@ function setupLayers(map: maplibregl.Map) {
       "icon-rotation-alignment": "map",
       "icon-allow-overlap": true,
       "icon-ignore-placement": true,
+      "text-font": MAP_FONT,
       "text-field": ["get", "vipLabel"],
       "text-size": 9,
       "text-offset": [0, -1.5],
@@ -703,6 +717,36 @@ function setupLayers(map: maplibregl.Map) {
   });
 
   // --- Earthquakes (sized by magnitude) ---
+  // Outer pulse ring
+  map.addLayer({
+    id: "earthquakes-pulse",
+    type: "circle",
+    source: "earthquakes",
+    paint: {
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["get", "magnitude"],
+        2.5, 16, 5, 30, 7, 50,
+      ],
+      "circle-color": [
+        "interpolate",
+        ["linear"],
+        ["get", "magnitude"],
+        2.5, "#ffaa00", 5, "#ff4444", 7, "#ff0000",
+      ],
+      "circle-opacity": 0.15,
+      "circle-stroke-width": 1.5,
+      "circle-stroke-color": [
+        "interpolate",
+        ["linear"],
+        ["get", "magnitude"],
+        2.5, "#ffaa00", 5, "#ff4444", 7, "#ff0000",
+      ],
+      "circle-stroke-opacity": 0.4,
+    },
+  });
+  // Inner dot
   map.addLayer({
     id: "earthquakes-layer",
     type: "circle",
@@ -712,7 +756,7 @@ function setupLayers(map: maplibregl.Map) {
         "interpolate",
         ["linear"],
         ["get", "magnitude"],
-        2.5, 6, 5, 14, 7, 24,
+        2.5, 5, 5, 12, 7, 20,
       ],
       "circle-color": [
         "interpolate",
@@ -720,9 +764,27 @@ function setupLayers(map: maplibregl.Map) {
         ["get", "magnitude"],
         2.5, "#ffaa00", 5, "#ff4444", 7, "#ff0000",
       ],
-      "circle-opacity": 0.7,
-      "circle-stroke-width": 1,
-      "circle-stroke-color": "#ff4444",
+      "circle-opacity": 0.8,
+      "circle-stroke-width": 2,
+      "circle-stroke-color": "rgba(255,255,255,0.5)",
+    },
+  });
+  // Magnitude label
+  map.addLayer({
+    id: "earthquakes-label",
+    type: "symbol",
+    source: "earthquakes",
+    layout: {
+      "text-font": MAP_FONT,
+      "text-field": ["concat", "M", ["to-string", ["get", "magnitude"]]],
+      "text-size": 9,
+      "text-offset": [0, -1.8],
+      "text-allow-overlap": true,
+    },
+    paint: {
+      "text-color": "#ffffff",
+      "text-halo-color": "rgba(0,0,0,0.8)",
+      "text-halo-width": 1,
     },
   });
 
@@ -740,6 +802,7 @@ function setupLayers(map: maplibregl.Map) {
       ],
       "icon-allow-overlap": true,
       "icon-ignore-placement": true,
+      "text-font": MAP_FONT,
       "text-field": "{point_count_abbreviated}",
       "text-size": 10,
       "text-offset": [0, 1.6],
@@ -789,6 +852,7 @@ function setupLayers(map: maplibregl.Map) {
       ],
       "icon-allow-overlap": true,
       "icon-ignore-placement": true,
+      "text-font": MAP_FONT,
       "text-field": [
         "concat",
         ["to-string", ["round", ["/", ["get", "pm25_sum"], ["get", "pm25_count"]]]],
@@ -822,6 +886,7 @@ function setupLayers(map: maplibregl.Map) {
       "icon-size": 0.85,
       "icon-allow-overlap": true,
       "icon-ignore-placement": true,
+      "text-font": MAP_FONT,
       "text-field": ["to-string", ["round", ["get", "pm25"]]],
       "text-size": 9,
       "text-offset": [0, 1.8],
@@ -858,6 +923,7 @@ function setupLayers(map: maplibregl.Map) {
       ],
       "icon-allow-overlap": true,
       "icon-ignore-placement": true,
+      "text-font": MAP_FONT,
       "text-field": "{point_count_abbreviated}",
       "text-size": 10,
       "text-offset": [0, 1.6],
@@ -1014,7 +1080,7 @@ function updateMapData(
     military: ["military-flights-layer"],
     private: ["private-flights-layer"],
     ships: ["ships-layer"],
-    earthquakes: ["earthquakes-layer"],
+    earthquakes: ["earthquakes-pulse", "earthquakes-layer", "earthquakes-label"],
     fires: ["fires-layer", "fires-cluster"],
     weather: [],
     news: [],

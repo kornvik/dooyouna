@@ -43,6 +43,11 @@ body {
 .maplibregl-ctrl-attrib {
   display: none !important;
 }
+@media (max-width: 639px) {
+  .maplibregl-ctrl-bottom-right {
+    display: none !important;
+  }
+}
 
 .maplibregl-popup {
   max-width: 320px !important;
@@ -198,6 +203,11 @@ body {
 }
 .province-dossier-enter {
   animation: slide-in-left 0.25s ease-out;
+}
+@media (max-width: 639px) {
+  .province-dossier-enter {
+    animation: none;
+  }
 }
 
 /* Mobile-friendly touch targets */

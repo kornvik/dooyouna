@@ -24,12 +24,12 @@ interface MetricConfig {
 const METRICS: MetricConfig[] = [
   { source: "domestic_flights", label: "เที่ยวบินในประเทศ", unit: "ลำ", color: "#00ff88", icon: <Plane size={14} /> },
   { source: "international_flights", label: "เที่ยวบินระหว่างประเทศ", unit: "ลำ", color: "#00d4ff", icon: <Plane size={14} /> },
-  { source: "military_flights", label: "เที่ยวบินทหาร", unit: "ลำ", color: "#ffdd00", icon: <Plane size={14} /> },
+  // { source: "military_flights", label: "เที่ยวบินทหาร", unit: "ลำ", color: "#ffdd00", icon: <Plane size={14} /> },
   { source: "fires", label: "จุดความร้อน", unit: "จุด", color: "#ff4400", icon: <Flame size={14} /> },
   { source: "pm25_avg", label: "PM2.5 เฉลี่ย", unit: "µg/m³", color: "#cc00ff", icon: <Wind size={14} /> },
   { source: "earthquakes", label: "แผ่นดินไหว", unit: "ครั้ง", color: "#ff4444", icon: <Activity size={14} /> },
-  { source: "flood", label: "สถานีเฝ้าระวังน้ำ", unit: "สถานี", color: "#ffaa00", icon: <Droplets size={14} /> },
-  { source: "ships", label: "เรือ", unit: "ลำ", color: "#00ff88", icon: <Ship size={14} /> },
+  { source: "flood", label: "จำนวนสถานีน้ำที่มีสถานะเฝ้าระวัง", unit: "สถานี", color: "#ffaa00", icon: <Droplets size={14} /> },
+  // { source: "ships", label: "เรือ", unit: "ลำ", color: "#00ff88", icon: <Ship size={14} /> },
 ];
 
 function MetricCard({ config, data }: { config: MetricConfig; data: TrendRow[] }) {
@@ -124,7 +124,7 @@ export default function TrendsPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] p-6">
+    <div className="min-h-screen bg-[var(--bg-primary)] p-4 sm:p-6 overflow-x-hidden">
       {/* Header */}
       <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between">
         <div className="flex items-center gap-4">

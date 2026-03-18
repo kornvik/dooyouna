@@ -3,7 +3,7 @@
 import type { FastData, LayerName, SlowData } from "@/types";
 import {
   Plane,
-  Ship,
+  // Ship,
   Flame,
   CloudRain,
   Newspaper,
@@ -18,6 +18,7 @@ import {
   Cloud,
 } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 
 interface LayerPanelProps {
@@ -61,7 +62,12 @@ function LayerItem({
     const el = infoRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    setTip({ x: rect.right + 6, y: rect.top + rect.height / 2 });
+    const tipWidth = 200;
+    // If tooltip would overflow right edge, position to the left of the icon
+    const x = rect.right + 6 + tipWidth > window.innerWidth
+      ? rect.left - tipWidth - 6
+      : rect.right + 6;
+    setTip({ x, y: rect.top + rect.height / 2 });
   };
 
   return (
@@ -100,13 +106,14 @@ function LayerItem({
       >
         <Info size={9} style={{ color: "var(--text-secondary)" }} className="opacity-30" />
       </span>
-      {tip && (
+      {tip && createPortal(
         <span
           className="info-tooltip-fixed"
           style={{ left: tip.x, top: tip.y }}
         >
           แหล่ง: {source}{refreshInfo ? `\nอัปเดตทุก: ${refreshInfo}` : ""}
-        </span>
+        </span>,
+        document.body,
       )}
     </button>
   );
@@ -124,19 +131,19 @@ export default function LayerPanel({
   const flights = fastData?.flights;
 
   return (
-    <div className="hud-panel w-[calc(100vw-3rem)] sm:w-56 flex flex-col max-h-[80vh] sm:max-h-none">
-      {/* Header — click to collapse */}
-      <button
-        onClick={() => setCollapsed((c) => !c)}
-        className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-between w-full text-left cursor-pointer"
+    <div className="hud-panel w-[75vw] sm:w-56 flex flex-col max-h-[80vh] sm:max-h-none">
+      {/* Header — click anywhere to collapse on desktop */}
+      <div
+        onClick={() => { if (!onClose) setCollapsed((c) => !c); }}
+        className="px-3 py-2 border-b border-[var(--border-color)] flex items-center justify-center sm:justify-between w-full relative sm:cursor-pointer"
       >
         <span className="text-[10px] tracking-widest text-[var(--accent)] glow-text">
           ชั้นข้อมูล
         </span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:static absolute right-3">
           <ChevronDown
             size={12}
-            className="text-[var(--text-secondary)] transition-transform duration-200"
+            className="hidden sm:block text-[var(--text-secondary)] transition-transform duration-200"
             style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
           />
           {onClose && (
@@ -151,7 +158,7 @@ export default function LayerPanel({
             </span>
           )}
         </div>
-      </button>
+      </div>
 
       {!collapsed && <div className="p-1.5 flex flex-col gap-0.5 overflow-y-auto max-h-[70vh]">
         {/* Flights */}
@@ -214,6 +221,7 @@ export default function LayerPanel({
           refreshInfo="~1 นาที"
           onToggle={onToggle}
         /> */}
+        {/* Ships disabled — AIS WebSocket source currently broken
         <LayerItem
           name="ships"
           label="เรือ"
@@ -225,7 +233,7 @@ export default function LayerPanel({
           source="AIS (MarineTraffic)"
           refreshInfo="~30 นาที"
           onToggle={onToggle}
-        />
+        /> */}
 
         {/* Natural Hazards */}
         <div className="px-2 pt-3 pb-1 text-[9px] tracking-wider text-[var(--text-secondary)] uppercase">
