@@ -10,7 +10,6 @@ const REGION_BBOX = {
   maxLon: 107.7,
 };
 
-const MAX_RESULTS = 5000;
 
 function parseCsvLine(line: string): string[] {
   return line.split(",");
@@ -68,7 +67,7 @@ export async function fetchFires(): Promise<FireHotspot[]> {
     }
 
     result.sort((a, b) => (b.frp ?? 0) - (a.frp ?? 0));
-    return result.slice(0, MAX_RESULTS);
+    return result;
   } catch {
     return [];
   }
