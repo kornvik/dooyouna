@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { BarChart3, Info, Layers, Newspaper } from "lucide-react";
+import { BarChart3, Github, Info, Layers, Newspaper } from "lucide-react";
 import LayerPanel from "@/components/LayerPanel";
 import NewsFeed from "@/components/NewsFeed";
 import ThreatIndex from "@/components/ThreatIndex";
@@ -171,6 +171,14 @@ export default function HomePage() {
           >
             <Info size={12} />
           </button>
+          <a
+            href="https://github.com/kornvik/dooyouna"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors"
+          >
+            <Github size={12} />
+          </a>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4 text-[10px]">
