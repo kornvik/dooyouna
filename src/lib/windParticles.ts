@@ -1,7 +1,8 @@
 import type maplibregl from "maplibre-gl";
 import type { WindPoint } from "@/types";
 
-const TRAIL_LEN = 12;
+const MIN_TRAIL = 14;
+const MAX_TRAIL = 36;
 
 interface Particle {
   trail: { x: number; y: number }[]; // newest at end
@@ -42,8 +43,8 @@ export function interpolateWind(
 
 const PARTICLE_COUNT = 400;
 const SPEED_SCALE = 0.12;
-const MIN_AGE = 50;
-const MAX_AGE = 90;
+const MIN_AGE = 250;
+const MAX_AGE = 400;
 const MIN_DRAW_SPEED = 1;
 
 function randomAge(): number {
@@ -115,16 +116,20 @@ export function createWindParticleRenderer(
       const [u, v] = interpolateWind(lngLat.lat, lngLat.lng, windPoints);
       const speed = Math.sqrt(u * u + v * v);
 
-      // Advance head
-      const nx = head.x + u * zoomFactor;
-      const ny = head.y + v * zoomFactor;
+      // Normalize movement to a constant pace; trail length encodes speed
+      const moveSpeed = speed > 0.1 ? 2.0 / speed : 0;
+      const nx = head.x + u * moveSpeed * zoomFactor;
+      const ny = head.y + v * moveSpeed * zoomFactor;
       p.trail.push({ x: nx, y: ny });
-      if (p.trail.length > TRAIL_LEN) p.trail.shift();
+
+      // Dynamic trail length: longer = faster wind
+      const trailLen = Math.round(MIN_TRAIL + Math.min(speed / 25, 1) * (MAX_TRAIL - MIN_TRAIL));
+      while (p.trail.length > trailLen) p.trail.shift();
       p.age++;
 
       // Draw trail with fading opacity (tail→head)
       if (speed >= MIN_DRAW_SPEED && p.trail.length >= 2) {
-        const baseAlpha = Math.min((speed - MIN_DRAW_SPEED) / 12, 1) * 0.8;
+        const baseAlpha = 0.25 + Math.min((speed - MIN_DRAW_SPEED) / 30, 1) * 0.35;
         const len = p.trail.length;
         for (let j = 1; j < len; j++) {
           const segAlpha = baseAlpha * (j / len);

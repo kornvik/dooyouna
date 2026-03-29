@@ -5,21 +5,19 @@ export interface WindPoint {
   direction: number; // degrees (meteorological: where wind comes FROM)
 }
 
-// Grid of points across Thailand/region for wind sampling
-const GRID_POINTS = [
-  { lat: 19.5, lon: 99.0 },  // Chiang Mai
-  { lat: 18.0, lon: 100.5 }, // Lampang/Phrae
-  { lat: 17.0, lon: 104.0 }, // Nakhon Phanom
-  { lat: 15.0, lon: 100.5 }, // Central
-  { lat: 14.0, lon: 100.5 }, // Bangkok area
-  { lat: 13.75, lon: 100.5 },// Bangkok
-  { lat: 12.5, lon: 102.0 }, // Eastern
-  { lat: 9.0, lon: 99.0 },   // Southern
-  { lat: 7.5, lon: 100.5 },  // Deep south
-  { lat: 16.0, lon: 103.0 }, // Isan
-  { lat: 13.0, lon: 105.0 }, // Cambodia border
-  { lat: 20.0, lon: 100.0 }, // Chiang Rai
-];
+// Generate uniform grid covering Thailand bbox (lat 5.5–20.5, lon 97.3–107.7)
+// ~1.5° spacing ≈ 77 points for much better interpolation accuracy
+function generateGrid(): { lat: number; lon: number }[] {
+  const points: { lat: number; lon: number }[] = [];
+  for (let lat = 6; lat <= 20; lat += 1.5) {
+    for (let lon = 98; lon <= 107; lon += 1.5) {
+      points.push({ lat, lon });
+    }
+  }
+  return points;
+}
+
+const GRID_POINTS = generateGrid();
 
 export async function fetchWind(): Promise<WindPoint[]> {
   try {
