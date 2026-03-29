@@ -117,7 +117,7 @@ export function createWindParticleRenderer(
 
       // Advance head
       const nx = head.x + u * zoomFactor;
-      const ny = head.y - v * zoomFactor;
+      const ny = head.y + v * zoomFactor;
       p.trail.push({ x: nx, y: ny });
       if (p.trail.length > TRAIL_LEN) p.trail.shift();
       p.age++;
