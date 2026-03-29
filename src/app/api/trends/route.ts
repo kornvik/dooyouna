@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const source = searchParams.get("source");
-  const days = Math.min(Number(searchParams.get("days") || 30), 30);
+  const days = Math.min(Number(searchParams.get("days") || 30), 365);
 
   if (!source) {
     return NextResponse.json({ error: "source param required" }, { status: 400 });

@@ -32,18 +32,23 @@ const METRICS: MetricConfig[] = [
   // { source: "ships", label: "เรือ", unit: "ลำ", color: "#00ff88", icon: <Ship size={14} /> },
 ];
 
-function MetricCard({ config, data }: { config: MetricConfig; data: TrendRow[] }) {
-  const values = data.map((d) => d.value);
-  const latest = values.length > 0 ? values[values.length - 1] : null;
-  const prev = values.length > 1 ? values[values.length - 2] : null;
+function MetricCard({ config, data, totalDays }: { config: MetricConfig; data: TrendRow[]; totalDays: number }) {
+  const rawValues = data.map((d) => d.value);
+  // Pad with nulls on the left so sparkline shows the full time range
+  const padCount = Math.max(0, totalDays - rawValues.length);
+  const values = [...Array<number | null>(padCount).fill(null), ...rawValues];
+  const labels = [...Array<string>(padCount).fill(""), ...data.map((d) => d.date)];
+  const latest = rawValues.length > 0 ? rawValues[rawValues.length - 1] : null;
+  const prev = rawValues.length > 1 ? rawValues[rawValues.length - 2] : null;
   const change = latest != null && prev != null && prev > 0
     ? ((latest - prev) / prev) * 100
     : null;
 
-  const min = values.length > 0 ? Math.min(...values) : 0;
-  const max = values.length > 0 ? Math.max(...values) : 0;
-  const avg = values.length > 0
-    ? Math.round((values.reduce((s, v) => s + v, 0) / values.length) * 10) / 10
+  const realValues = rawValues;
+  const min = realValues.length > 0 ? Math.min(...realValues) : 0;
+  const max = realValues.length > 0 ? Math.max(...realValues) : 0;
+  const avg = realValues.length > 0
+    ? Math.round((realValues.reduce((s, v) => s + v, 0) / realValues.length) * 10) / 10
     : 0;
 
   return (
@@ -76,7 +81,7 @@ function MetricCard({ config, data }: { config: MetricConfig; data: TrendRow[] }
       </div>
 
       {/* Sparkline */}
-      <Sparkline data={values} width={320} height={48} color={config.color} />
+      <Sparkline data={values} labels={labels} width={320} height={48} color={config.color} />
 
       {/* Stats row */}
       <div className="flex gap-4 text-[10px] text-[var(--text-secondary)]">
@@ -96,18 +101,26 @@ function MetricCard({ config, data }: { config: MetricConfig; data: TrendRow[] }
   );
 }
 
+const RANGE_OPTIONS = [
+  { label: "30 วัน", days: 30 },
+  { label: "3 เดือน", days: 90 },
+  { label: "6 เดือน", days: 180 },
+  { label: "1 ปี", days: 365 },
+];
+
 export default function TrendsPage() {
   const [trends, setTrends] = useState<Record<string, TrendRow[]>>({});
   const [loading, setLoading] = useState(true);
+  const [days, setDays] = useState(30);
 
-  const fetchAll = async () => {
+  const fetchAll = async (d: number = days) => {
     setLoading(true);
     const results: Record<string, TrendRow[]> = {};
 
     await Promise.all(
       METRICS.map(async (m) => {
         try {
-          const res = await fetch(`/api/trends?source=${m.source}&days=30`);
+          const res = await fetch(`/api/trends?source=${m.source}&days=${d}`);
           if (res.ok) results[m.source] = await res.json();
         } catch { /* skip */ }
       })
@@ -118,41 +131,57 @@ export default function TrendsPage() {
   };
 
   useEffect(() => {
-    fetchAll();
-    const interval = setInterval(fetchAll, 5 * 60_000); // refresh every 5 min
+    fetchAll(days);
+    const interval = setInterval(() => fetchAll(days), 5 * 60_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [days]);
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] p-4 sm:p-6 overflow-x-hidden">
       {/* Header */}
-      <div className="max-w-4xl mx-auto mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors text-sm"
-          >
-            <ArrowLeft size={14} />
-            แผนที่
-          </Link>
-          <div>
-            <h1 className="text-[var(--accent)] font-bold tracking-[0.2em] glow-text">
-              DOOYOUNA — แนวโน้ม
-            </h1>
-            <p className="text-[10px] text-[var(--text-secondary)] tracking-wider">
-              ข้อมูลย้อนหลัง 30 วัน
-            </p>
+      <div className="max-w-4xl mx-auto mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors text-sm"
+            >
+              <ArrowLeft size={14} />
+              แผนที่
+            </Link>
+            <div>
+              <h1 className="text-[var(--accent)] font-bold tracking-[0.2em] glow-text text-sm sm:text-base">
+                DOOYOUNA — แนวโน้ม
+              </h1>
+            </div>
           </div>
+
+          <button
+            onClick={() => fetchAll()}
+            disabled={loading}
+            className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+          >
+            <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+            <span className="hidden sm:inline">รีเฟรช</span>
+          </button>
         </div>
 
-        <button
-          onClick={fetchAll}
-          disabled={loading}
-          className="flex items-center gap-1.5 text-[10px] text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors"
-        >
-          <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
-          รีเฟรช
-        </button>
+        {/* Range selector */}
+        <div className="flex items-center gap-1 mt-3">
+          {RANGE_OPTIONS.map((opt) => (
+            <button
+              key={opt.days}
+              onClick={() => setDays(opt.days)}
+              className={`px-2.5 py-1 text-[10px] rounded border transition-colors cursor-pointer ${
+                days === opt.days
+                  ? "border-[var(--accent)] text-[var(--accent)]"
+                  : "border-[var(--border-color)] text-[var(--text-secondary)] hover:text-[var(--accent)]"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Grid of metric cards */}
@@ -169,7 +198,7 @@ export default function TrendsPage() {
               </div>
             ))
           : METRICS.map((m) => (
-              <MetricCard key={m.source} config={m} data={trends[m.source] || []} />
+              <MetricCard key={m.source} config={m} data={trends[m.source] || []} totalDays={days} />
             ))
         }
       </div>

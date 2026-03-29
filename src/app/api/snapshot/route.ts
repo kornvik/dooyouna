@@ -238,11 +238,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Cleanup old rows (>30 days)
+  // Cleanup old rows (>400 days — keep 1+ year of history)
   await supabaseAdmin
     .from("daily_snapshots")
     .delete()
-    .lt("date", new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10));
+    .lt("date", new Date(Date.now() - 400 * 86400000).toISOString().slice(0, 10));
 
   return NextResponse.json({ ok: true, date: today, hour, rows: rows.length });
 }
