@@ -1,6 +1,6 @@
 # DooYouNa
 
-Open-source intelligence (OSINT) dashboard for Thailand. Real-time geospatial data aggregated onto an interactive dark-theme map.
+Open-source intelligence (OSINT) dashboard for Thailand. Real-time geospatial data aggregated onto an interactive dark-theme map. Feel free to contribute krub :)
 
 ![Stack](https://img.shields.io/badge/Next.js-black?logo=next.js) ![Stack](https://img.shields.io/badge/MapLibre_GL-396CB2?logo=maplibre&logoColor=white) ![Stack](https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwindcss&logoColor=white)
 
