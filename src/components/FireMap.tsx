@@ -202,6 +202,10 @@ export default function FireMap({ fires }: FireMapProps) {
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-left");
+    map.addControl(new maplibregl.GeolocateControl({
+      positionOptions: { enableHighAccuracy: true },
+      trackUserLocation: true,
+    }), "top-left");
 
     registerElevationProtocol();
 
