@@ -654,6 +654,7 @@ function setupLayers(map: maplibregl.Map) {
     tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
     tileSize: 256,
     encoding: "terrarium",
+    maxzoom: 15,
   });
 
   // Elevation color fill (hypsometric tint)
@@ -661,6 +662,7 @@ function setupLayers(map: maplibregl.Map) {
     type: "raster",
     tiles: ["elevcolor://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
     tileSize: 256,
+    maxzoom: 15,
   });
   map.addLayer({
     id: "elevation-color-layer",

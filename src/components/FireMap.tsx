@@ -223,6 +223,7 @@ export default function FireMap({ fires }: FireMapProps) {
         tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
         tileSize: 256,
         encoding: "terrarium",
+        maxzoom: 15,
       });
 
       map.setTerrain({ source: "terrain-dem", exaggeration: 1.5 });
@@ -232,6 +233,7 @@ export default function FireMap({ fires }: FireMapProps) {
         type: "raster",
         tiles: ["elevcolor://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
         tileSize: 256,
+        maxzoom: 15,
       });
       map.addLayer({
         id: "elevation-color-layer",
