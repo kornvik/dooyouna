@@ -21,13 +21,31 @@ export default function FirePage() {
   const [sliderHour, setSliderHour] = useState<number | null>(null); // null = latest snapshot
   const [maxAgeHours, setMaxAgeHours] = useState<number>(24); // 3, 6, or 24
 
-  // Fetch fires
+  // Fetch fires — with localStorage cache for offline use
   useEffect(() => {
     let cancelled = false;
+    const CACHE_KEY = "fire-hotspots-cache";
+
+    // Load cached data first so we show something immediately
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, ts } = JSON.parse(cached);
+        if (data?.length && Date.now() - ts < 24 * 3600_000) {
+          setFires(data);
+          setLoading(false);
+        }
+      }
+    } catch { /* ignore */ }
+
     const load = async () => {
-      setLoading(true);
-      const data = await fetchSource("fires");
-      if (!cancelled && data) setFires(data);
+      try {
+        const data = await fetchSource("fires");
+        if (!cancelled && data?.length) {
+          setFires(data);
+          try { localStorage.setItem(CACHE_KEY, JSON.stringify({ data, ts: Date.now() })); } catch { /* quota */ }
+        }
+      } catch { /* offline — keep cached data */ }
       if (!cancelled) setLoading(false);
     };
     load();
