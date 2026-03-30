@@ -13,6 +13,7 @@ import {
 import { getVipLabel } from "@/lib/vipWatchlist";
 import { setupProvinceLayers } from "@/lib/provinceLayers";
 import { createWindParticleRenderer, type WindParticleRenderer } from "@/lib/windParticles";
+import mlcontour from "maplibre-contour";
 
 interface MapViewerProps {
   fastData: FastData | null;
@@ -216,6 +217,63 @@ function createAQCloudIcon(level: "good" | "moderate" | "bad" | "hazardous", siz
 // Fetches GIBS MODIS tiles, strips out brown/grey land via saturation,
 // keeps only water (blue) and flood (red/yellow/cyan) pixels.
 // -----------------------------------------------------------------------
+let elevProtocolRegistered = false;
+function registerElevationProtocol() {
+  if (elevProtocolRegistered) return;
+  elevProtocolRegistered = true;
+
+  const RAMP: [number, number, number, number][] = [
+    [0, 10, 40, 20],
+    [30, 15, 80, 30],
+    [100, 30, 140, 40],
+    [250, 60, 180, 50],
+    [500, 140, 200, 40],
+    [800, 220, 200, 30],
+    [1200, 240, 140, 30],
+    [1800, 220, 70, 30],
+    [2500, 200, 200, 200],
+    [4000, 255, 255, 255],
+  ];
+
+  function elevToColor(h: number): [number, number, number] {
+    if (h <= RAMP[0][0]) return [RAMP[0][1], RAMP[0][2], RAMP[0][3]];
+    for (let i = 1; i < RAMP.length; i++) {
+      if (h <= RAMP[i][0]) {
+        const t = (h - RAMP[i - 1][0]) / (RAMP[i][0] - RAMP[i - 1][0]);
+        return [
+          RAMP[i - 1][1] + (RAMP[i][1] - RAMP[i - 1][1]) * t,
+          RAMP[i - 1][2] + (RAMP[i][2] - RAMP[i - 1][2]) * t,
+          RAMP[i - 1][3] + (RAMP[i][3] - RAMP[i - 1][3]) * t,
+        ];
+      }
+    }
+    const last = RAMP[RAMP.length - 1];
+    return [last[1], last[2], last[3]];
+  }
+
+  maplibregl.addProtocol("elevcolor", async (params, abortController) => {
+    const url = params.url.replace("elevcolor://", "https://");
+    const resp = await fetch(url, { signal: abortController.signal });
+    const blob = await resp.blob();
+    const bitmap = await createImageBitmap(blob);
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(bitmap, 0, 0);
+    const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const h = (d[i] * 256 + d[i + 1] + d[i + 2] / 256) - 32768;
+      if (h <= 0) { d[i + 3] = 0; } else {
+        const [r, g, b] = elevToColor(h);
+        d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = 70;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+    const result = await canvas.convertToBlob({ type: "image/png" });
+    return { data: await result.arrayBuffer() };
+  });
+}
+
 let floodProtocolRegistered = false;
 
 function registerFloodProtocol() {
@@ -276,6 +334,7 @@ export default function MapViewer({
     if (!mapContainer.current || mapRef.current) return;
 
     registerFloodProtocol();
+    registerElevationProtocol();
 
     const map = new maplibregl.Map({
       container: mapContainer.current,
@@ -589,6 +648,98 @@ export default function MapViewer({
 // Setup all map sources and layers (called once after load + icons ready)
 // ---------------------------------------------------------------------------
 function setupLayers(map: maplibregl.Map) {
+  // Terrain hillshade
+  map.addSource("terrain-dem", {
+    type: "raster-dem",
+    tiles: ["https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+    tileSize: 256,
+    encoding: "terrarium",
+  });
+
+  // Elevation color fill (hypsometric tint)
+  map.addSource("elevation-color", {
+    type: "raster",
+    tiles: ["elevcolor://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"],
+    tileSize: 256,
+  });
+  map.addLayer({
+    id: "elevation-color-layer",
+    type: "raster",
+    source: "elevation-color",
+    paint: { "raster-opacity": 0.4 },
+  });
+
+  // Contour lines from DEM
+  const demSource = new mlcontour.DemSource({
+    url: "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
+    encoding: "terrarium",
+    maxzoom: 12,
+  });
+  demSource.setupMaplibre(maplibregl);
+
+  map.addSource("contour-source", {
+    type: "vector",
+    tiles: [demSource.contourProtocolUrl({
+      overzoom: 1,
+      thresholds: {
+        6: [500],
+        8: [500, 200],
+        10: [500, 100],
+        12: [200, 50],
+      },
+      elevationKey: "ele",
+      levelKey: "level",
+      contourLayer: "contours",
+    })],
+    maxzoom: 13,
+  });
+
+  map.addLayer({
+    id: "contour-lines",
+    type: "line",
+    source: "contour-source",
+    "source-layer": "contours",
+    filter: ["==", ["get", "level"], 0],
+    paint: {
+      "line-color": "rgba(180, 160, 120, 0.25)",
+      "line-width": 0.5,
+    },
+  });
+
+  map.addLayer({
+    id: "contour-lines-major",
+    type: "line",
+    source: "contour-source",
+    "source-layer": "contours",
+    filter: ["==", ["get", "level"], 1],
+    paint: {
+      "line-color": "rgba(180, 160, 120, 0.4)",
+      "line-width": 0.8,
+    },
+  });
+
+  map.addLayer({
+    id: "contour-labels",
+    type: "symbol",
+    source: "contour-source",
+    "source-layer": "contours",
+    filter: ["==", ["get", "level"], 1],
+    minzoom: 5,
+    layout: {
+      "symbol-placement": "line",
+      "text-field": ["concat", ["to-string", ["get", "ele"]], " ม."],
+      "text-size": ["interpolate", ["linear"], ["zoom"], 5, 9, 8, 11, 12, 13],
+      "text-font": ["Noto Sans Regular"],
+      "text-max-angle": 30,
+      "text-padding": 15,
+    },
+    paint: {
+      "text-color": "rgba(200, 180, 140, 0.75)",
+      "text-halo-color": "rgba(0, 0, 0, 0.9)",
+      "text-halo-width": 1.5,
+    },
+  });
+
   // Non-clustered GeoJSON sources
   const plainSources = [
     "domestic-flights",
@@ -1089,6 +1240,7 @@ function updateMapData(
     wind: [], // managed by canvas particle renderer
     floodSatellite: [], // managed as raster in separate useEffect
     nightLights: [], // managed as raster in separate useEffect
+    terrain: ["elevation-color-layer", "contour-lines", "contour-lines-major", "contour-labels"],
   };
 
   for (const [layerName, mapLayerIds] of Object.entries(layerMap)) {

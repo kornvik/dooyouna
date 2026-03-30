@@ -16,6 +16,7 @@ import {
   Info,
   Sun,
   Cloud,
+  Mountain,
 } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -350,6 +351,20 @@ export default function LayerPanel({
           color="#ffdd00"
           source="NASA VIIRS Day/Night Band (Daily)"
           refreshInfo="รายวัน"
+          onToggle={onToggle}
+        />
+
+        {/* Map Visualization */}
+        <div className="px-2 pt-3 pb-1 text-[9px] tracking-wider text-[var(--text-secondary)] uppercase">
+          แผนที่
+        </div>
+        <LayerItem
+          name="terrain"
+          label="ภูมิประเทศ"
+          icon={<Mountain size={13} />}
+          active={activeLayers.has("terrain")}
+          color="#4a6741"
+          source="แผนที่ความสูงภูมิประเทศ"
           onToggle={onToggle}
         />
       </div>}

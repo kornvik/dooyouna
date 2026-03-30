@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { BarChart3, Github, Info, Layers, Newspaper } from "lucide-react";
+import { BarChart3, Flame, Github, Info, Layers, Newspaper } from "lucide-react";
 import LayerPanel from "@/components/LayerPanel";
 import NewsFeed from "@/components/NewsFeed";
 import ThreatIndex from "@/components/ThreatIndex";
@@ -171,6 +171,13 @@ export default function HomePage() {
           >
             <Info size={12} />
           </button>
+          <Link
+            href="/fire"
+            className="text-[var(--text-secondary)] hover:text-orange-400 transition-colors"
+            title="ระบบเฝ้าระวังไฟป่า"
+          >
+            <Flame size={12} />
+          </Link>
           <a
             href="https://github.com/kornvik/dooyouna"
             target="_blank"

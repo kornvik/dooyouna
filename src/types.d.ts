@@ -48,6 +48,8 @@ export interface FireHotspot {
   lon: number;
   frp?: number;
   confidence?: string;
+  acq_time?: string;
+  acq_date?: string;
 }
 
 export interface NewsArticle {
@@ -166,7 +168,8 @@ export type LayerName =
   | "flood"
   | "floodSatellite"
   | "nightLights"
-  | "wind";
+  | "wind"
+  | "terrain";
 
 // Province Intel Dossier types
 export interface ProvinceProperties {
