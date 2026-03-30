@@ -1,3 +1,4 @@
+import concaveman from "concaveman";
 import type { FireHotspot } from "@/types";
 
 /**
@@ -44,8 +45,6 @@ export function clusterHotspots(points: FireHotspot[], radius = 0.05): FireHotsp
       const nkey = `${cx + dx},${cy + dy}`;
       const nIndices = grid.get(nkey);
       if (!nIndices) continue;
-      // Union the first point of each cell (representative),
-      // then check actual distances for border points
       for (const ni of nIndices) {
         for (const ci of indices) {
           if (Math.abs(points[ci].lat - points[ni].lat) < radius &&
@@ -68,39 +67,6 @@ export function clusterHotspots(points: FireHotspot[], radius = 0.05): FireHotsp
   return Array.from(groups.values());
 }
 
-function cross(O: [number, number], A: [number, number], B: [number, number]): number {
-  return (A[0] - O[0]) * (B[1] - O[1]) - (A[1] - O[1]) * (B[0] - O[0]);
-}
-
-/** Monotone chain convex hull. Returns vertices in CCW order. */
-export function convexHull(points: [number, number][]): [number, number][] {
-  const pts = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
-  if (pts.length < 3) return pts;
-  const lower: [number, number][] = [];
-  for (const p of pts) {
-    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
-    lower.push(p);
-  }
-  const upper: [number, number][] = [];
-  for (let i = pts.length - 1; i >= 0; i--) {
-    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], pts[i]) <= 0) upper.pop();
-    upper.push(pts[i]);
-  }
-  lower.pop();
-  upper.pop();
-  return lower.concat(upper);
-}
-
-function bufferHull(hull: [number, number][], buffer = 0.01): [number, number][] {
-  const cx = hull.reduce((s, p) => s + p[0], 0) / hull.length;
-  const cy = hull.reduce((s, p) => s + p[1], 0) / hull.length;
-  return hull.map(([x, y]) => {
-    const dx = x - cx, dy = y - cy;
-    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    return [x + (dx / dist) * buffer, y + (dy / dist) * buffer] as [number, number];
-  });
-}
-
 function getZoneColor(cluster: FireHotspot[]): string {
   const now = Date.now();
   const ages = cluster
@@ -116,27 +82,52 @@ function getZoneColor(cluster: FireHotspot[]): string {
   return "#aa6600";
 }
 
+function getMaxFrp(cluster: FireHotspot[]): number {
+  let max = 0;
+  for (const h of cluster) if (h.frp != null && h.frp > max) max = h.frp;
+  return Math.round(max);
+}
+
+/**
+ * Compute fire perimeters (แนวไฟ) using concave hull (alpha shapes).
+ * Much tighter fit than convex hull — traces actual fire boundary.
+ */
 export function computeFireZones(hotspots: FireHotspot[]): GeoJSON.FeatureCollection {
   if (hotspots.length === 0) return { type: "FeatureCollection", features: [] };
   const clusters = clusterHotspots(hotspots);
   const features: GeoJSON.Feature[] = [];
+
   for (const cluster of clusters) {
     if (cluster.length < 3) continue;
-    const pts: [number, number][] = cluster.map((h) => [h.lon, h.lat]);
-    const hull = convexHull(pts);
+
+    // Deduplicate coordinates (concaveman needs unique points)
+    const seen = new Set<string>();
+    const pts: number[][] = [];
+    for (const h of cluster) {
+      const key = `${h.lon.toFixed(5)},${h.lat.toFixed(5)}`;
+      if (!seen.has(key)) { seen.add(key); pts.push([h.lon, h.lat]); }
+    }
+    if (pts.length < 3) continue;
+
+    // Concave hull — concavity=2 (tighter fit), lengthThreshold=0 (no min edge)
+    const hull = concaveman(pts, 2, 0);
     if (hull.length < 3) continue;
-    const buffered = bufferHull(hull);
-    const coords = [...buffered, buffered[0]];
-    const frps = cluster.filter((h) => h.frp != null).map((h) => h.frp!);
-    const avgFrp = frps.length > 0 ? Math.round(frps.reduce((a, b) => a + b, 0) / frps.length) : 0;
+
+    // Close the ring
+    const coords = hull.map(([x, y]) => [x, y] as [number, number]);
+    if (coords[0][0] !== coords[coords.length - 1][0] || coords[0][1] !== coords[coords.length - 1][1]) {
+      coords.push(coords[0]);
+    }
+
+    const maxFrp = getMaxFrp(cluster);
     features.push({
       type: "Feature",
       geometry: { type: "Polygon", coordinates: [coords] },
       properties: {
         pointCount: cluster.length,
-        avgFrp,
+        maxFrp,
         color: getZoneColor(cluster),
-        label: `🔥 ${cluster.length} จุด`,
+        label: `${cluster.length} จุด`,
       },
     });
   }

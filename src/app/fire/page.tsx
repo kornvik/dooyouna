@@ -19,6 +19,7 @@ export default function FirePage() {
   const [fires, setFires] = useState<FireHotspot[]>([]);
   const [loading, setLoading] = useState(true);
   const [sliderHour, setSliderHour] = useState<number | null>(null); // null = latest snapshot
+  const [maxAgeHours, setMaxAgeHours] = useState<number>(24); // 3, 6, or 24
 
   // Fetch fires
   useEffect(() => {
@@ -41,15 +42,24 @@ export default function FirePage() {
     return { min: Math.min(...times), max: Math.max(...times) };
   }, [fires]);
 
-  // Filter fires by slider position — cumulative: all fires detected up to time T
+  // Filter fires by slider position + max age from now
   const filteredFires = useMemo(() => {
-    const endTime = sliderHour ?? timeRange?.max ?? Date.now();
+    const cutoff = Date.now() - maxAgeHours * 3600_000;
+    if (sliderHour !== null) {
+      // Slider active: show fires up to slider time AND within age window
+      return fires.filter((h) => {
+        const t = parseDetectTime(h);
+        if (t === null) return false;
+        return t <= sliderHour && t >= cutoff;
+      });
+    }
+    // Slider at latest: show all fires within age window
     return fires.filter((h) => {
       const t = parseDetectTime(h);
       if (t === null) return false;
-      return t <= endTime;
+      return t >= cutoff;
     });
-  }, [fires, sliderHour, timeRange]);
+  }, [fires, sliderHour, maxAgeHours]);
 
   const handleSliderChange = useCallback((hour: number | null) => {
     setSliderHour(hour);
@@ -79,18 +89,26 @@ export default function FirePage() {
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-base">🔥</span>
           <span className="text-xs font-bold tracking-wider text-[var(--accent)]">
-            <span className="hidden sm:inline">ระบบเฝ้าระวัง</span>ไฟป่า
+            <span className="hidden sm:inline">ระบบเฝ้าระวัง</span>จุดความร้อน
           </span>
         </div>
-        <div className="ml-auto flex items-center gap-2 sm:gap-4 text-[10px] text-[var(--text-secondary)]">
-          <span>
-            {loading ? "โหลด..." : `${fires.length.toLocaleString()} จุด`}
-          </span>
-          {sliderHour !== null && (
-            <span className="text-[var(--accent)]">
-              {filteredFires.length.toLocaleString()} แสดง
-            </span>
-          )}
+        <div className="ml-auto flex items-center gap-1.5 sm:gap-4 text-[10px] text-[var(--text-secondary)]">
+          <div className="flex gap-1">
+            {([3, 6, 24] as const).map((h) => (
+              <button
+                key={h}
+                onClick={() => setMaxAgeHours(h)}
+                className={`px-1.5 py-0.5 rounded text-[9px] transition-colors cursor-pointer ${
+                  maxAgeHours === h
+                    ? "bg-[var(--accent)] text-black font-bold"
+                    : "text-[var(--text-secondary)] hover:text-[var(--accent)]"
+                }`}
+              >
+                {h}ชม.
+              </button>
+            ))}
+          </div>
+          <span>{filteredFires.length.toLocaleString()} จุด</span>
           <span className="hidden sm:inline">4 ดาวเทียม (NOAA-20 · Suomi NPP · NOAA-21 · MODIS)</span>
         </div>
       </div>

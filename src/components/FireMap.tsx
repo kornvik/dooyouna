@@ -140,7 +140,7 @@ function formatFirePopup(p: Record<string, unknown>): string {
   return `<div ${POPUP_STYLE}>
     <div style="color:#ff4444;font-weight:bold;">🔥 ${level}</div>
     <div>FRP: ${frp.toFixed(1)} MW</div>
-    <div>ความเชื่อมั่น: ${conf}</div>
+    <div>ความเชื่อมั่น: ${conf === "high" ? "สูง" : conf === "nominal" ? "ปกติ" : conf === "low" ? "ต่ำ" : conf}</div>
     <div>ตรวจพบ: ${thaiTimeStr}</div>
     <div>พิกัด: <a href="${gmapUrl}" target="_blank" rel="noopener" style="color:#66bbff;text-decoration:underline;">${lat}°N, ${lon}°E</a></div>
   </div>`;
@@ -446,6 +446,8 @@ export default function FireMap({ fires }: FireMapProps) {
               "text-size": 12,
               "text-font": ["Open Sans Regular"],
               "text-allow-overlap": false,
+              "text-pitch-alignment": "map",
+              "text-rotation-alignment": "map",
             },
             paint: {
               "text-color": "rgba(0, 255, 136, 0.7)",
@@ -491,7 +493,7 @@ export default function FireMap({ fires }: FireMapProps) {
     return () => { map.remove(); mapRef.current = null; console.error = origError; };
   }, []);
 
-  // Update fire points data — retry until map is ready
+  // Update fire points + zones — retry until map is ready
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;

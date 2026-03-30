@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { computeFireZones, clusterHotspots, convexHull } from "../fireZones";
+import { computeFireZones, clusterHotspots } from "../fireZones";
 import type { FireHotspot } from "@/types";
 
 function makeHotspot(lat: number, lon: number, extra: Partial<FireHotspot> = {}): FireHotspot {
@@ -34,20 +34,20 @@ describe("computeFireZones", () => {
     expect(result.features).toHaveLength(2);
   });
 
-  it("calculates avgFrp correctly", () => {
+  it("calculates maxFrp correctly", () => {
     const result = computeFireZones([
       makeHotspot(13.50, 100.50, { frp: 10 }),
       makeHotspot(13.51, 100.51, { frp: 20 }),
       makeHotspot(13.52, 100.49, { frp: 30 }),
     ]);
-    expect(result.features[0].properties!.avgFrp).toBe(20);
+    expect(result.features[0].properties!.maxFrp).toBe(30);
   });
 
   it("has correct label and pointCount", () => {
     const result = computeFireZones([
       makeHotspot(13.5, 100.5), makeHotspot(13.51, 100.51), makeHotspot(13.52, 100.49),
     ]);
-    expect(result.features[0].properties!.label).toBe("🔥 3 จุด");
+    expect(result.features[0].properties!.label).toBe("3 จุด");
     expect(result.features[0].properties!.pointCount).toBe(3);
   });
 });
@@ -116,19 +116,5 @@ describe("clusterHotspots", () => {
 
   it("respects custom radius", () => {
     expect(clusterHotspots([makeHotspot(13.50, 100.50), makeHotspot(13.54, 100.50)], 0.02)).toHaveLength(2);
-  });
-});
-
-describe("convexHull", () => {
-  it("returns all points for a triangle", () => {
-    expect(convexHull([[0, 0], [1, 0], [0, 1]])).toHaveLength(3);
-  });
-
-  it("excludes interior points", () => {
-    expect(convexHull([[0, 0], [2, 0], [2, 2], [0, 2], [1, 1]])).toHaveLength(4);
-  });
-
-  it("returns input for fewer than 3 points", () => {
-    expect(convexHull([[1, 2]])).toEqual([[1, 2]]);
   });
 });
