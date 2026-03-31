@@ -184,14 +184,15 @@ export default function FireMap({ fires }: FireMapProps) {
         version: 8,
         glyphs: "https://cdn.protomaps.com/fonts/pbf/{fontstack}/{range}.pbf",
         sources: {
-          "carto-dark": {
+          "esri-satellite": {
             type: "raster",
-            tiles: ["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png"],
+            tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
             tileSize: 256,
-            attribution: "&copy; CARTO",
+            maxzoom: 19,
+            attribution: "&copy; Esri",
           },
         },
-        layers: [{ id: "carto-tiles", type: "raster", source: "carto-dark" }],
+        layers: [{ id: "satellite-tiles", type: "raster", source: "esri-satellite" }],
       },
       center: [100.5, 15.0],
       zoom: 6,
@@ -230,7 +231,7 @@ export default function FireMap({ fires }: FireMapProps) {
         maxzoom: 15,
       });
 
-      map.setTerrain({ source: "terrain-dem", exaggeration: 1.5 });
+      map.setTerrain({ source: "terrain-dem", exaggeration: 2.5 });
 
       // Elevation color fill (hypsometric tint)
       map.addSource("elevation-color", {
@@ -279,8 +280,8 @@ export default function FireMap({ fires }: FireMapProps) {
         "source-layer": "contours",
         filter: ["==", ["get", "level"], 0],
         paint: {
-          "line-color": "rgba(180, 160, 120, 0.3)",
-          "line-width": 0.5,
+          "line-color": "rgba(255, 255, 255, 0.35)",
+          "line-width": 0.6,
         },
       });
 
@@ -292,8 +293,8 @@ export default function FireMap({ fires }: FireMapProps) {
         "source-layer": "contours",
         filter: ["==", ["get", "level"], 1],
         paint: {
-          "line-color": "rgba(180, 160, 120, 0.5)",
-          "line-width": 1,
+          "line-color": "rgba(255, 255, 255, 0.6)",
+          "line-width": 1.2,
         },
       });
 
@@ -314,10 +315,25 @@ export default function FireMap({ fires }: FireMapProps) {
           "text-padding": 15,
         },
         paint: {
-          "text-color": "rgba(230, 210, 170, 0.9)",
-          "text-halo-color": "rgba(0, 0, 0, 0.9)",
-          "text-halo-width": 1.5,
+          "text-color": "rgba(255, 255, 255, 0.95)",
+          "text-halo-color": "rgba(0, 0, 0, 0.85)",
+          "text-halo-width": 2,
         },
+      });
+
+      // Place name labels overlay (CARTO labels-only tileset)
+      map.addSource("carto-labels", {
+        type: "raster",
+        tiles: ["https://basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}@2x.png"],
+        tileSize: 256,
+        maxzoom: 18,
+        attribution: "&copy; CARTO",
+      });
+      map.addLayer({
+        id: "place-labels",
+        type: "raster",
+        source: "carto-labels",
+        paint: { "raster-opacity": 0.85 },
       });
 
       // Fire points source — clustered
