@@ -158,33 +158,33 @@ export default function HomePage() {
           <div className="hidden sm:block text-[10px] text-[var(--text-secondary)] tracking-wider">
             ข่าวกรองประเทศไทย
           </div>
-          <Link
-            href="/trends"
-            className="hidden sm:flex items-center gap-1 text-[10px] text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors ml-2 border border-[var(--border-color)] rounded px-2 py-0.5"
-          >
-            <BarChart3 size={10} />
-            แนวโน้ม
-          </Link>
           <button
             onClick={() => setShowDisclaimer(true)}
-            className="ml-0.5 sm:ml-1 text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+            className="ml-0.5 sm:ml-1 text-white/70 hover:text-white transition-colors cursor-pointer p-1 -m-1"
           >
             <Info size={12} />
           </button>
           <Link
-            href="/fire"
-            className="text-[var(--text-secondary)] hover:text-orange-400 transition-colors"
-            title="ระบบเฝ้าระวังไฟป่า"
+            href="/trends"
+            className="hidden sm:flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 transition-colors border border-blue-400/30 rounded px-2 py-0.5"
           >
-            <Flame size={12} />
+            <BarChart3 size={10} />
+            แนวโน้ม
+          </Link>
+          <Link
+            href="/fire"
+            className="hidden sm:flex items-center gap-1 text-[10px] text-orange-400 hover:text-orange-300 transition-colors border border-orange-400/30 rounded px-2 py-0.5"
+          >
+            <Flame size={10} />
+            จุดความร้อน
           </Link>
           <a
             href="https://github.com/kornvik/dooyouna"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors"
+            className="text-green-400 hover:text-green-300 transition-colors p-1 -m-1"
           >
-            <Github size={12} />
+            <Github size={16} />
           </a>
         </div>
 
@@ -252,6 +252,13 @@ export default function HomePage() {
         aria-label="Trends"
       >
         <BarChart3 size={18} className="text-[var(--accent)]" />
+      </Link>
+      <Link
+        href="/fire"
+        className="sm:hidden fixed top-[9.5rem] right-3 z-20 hud-panel p-2.5"
+        aria-label="จุดความร้อน"
+      >
+        <Flame size={18} className="text-orange-400" />
       </Link>
 
       {/* Mobile panel: Layers */}

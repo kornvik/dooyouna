@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import mlcontour from "maplibre-contour";
 import type { FireHotspot } from "@/types";
+import type { SpreadAlert } from "@/lib/fireLandUse";
+
+export interface FireMapHandle {
+  flyTo: (lat: number, lon: number) => void;
+}
 
 interface FireMapProps {
   fires: FireHotspot[];
+  showLandUse?: boolean;
+  spreadAlerts?: SpreadAlert[];
 }
 
 function createFireIcon(size = 28): { width: number; height: number; data: Uint8ClampedArray } {
@@ -169,10 +176,28 @@ function toFireFeatures(fires: FireHotspot[]): GeoJSON.FeatureCollection {
   };
 }
 
-export default function FireMap({ fires }: FireMapProps) {
+const FireMap = forwardRef<FireMapHandle, FireMapProps>(function FireMap({ fires, showLandUse = false, spreadAlerts = [] }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const popupRef = useRef<maplibregl.Popup | null>(null);
+  const alertMarkerRef = useRef<maplibregl.Marker | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    flyTo(lat: number, lon: number) {
+      const map = mapRef.current;
+      if (!map) return;
+      // Remove previous alert marker
+      if (alertMarkerRef.current) alertMarkerRef.current.remove();
+      // Fly to location — zoom 9 so the full spread area is visible
+      map.flyTo({ center: [lon, lat], zoom: 9, duration: 1500 });
+      // Add temporary pulsing marker
+      const el = document.createElement("div");
+      el.innerHTML = `<style>@keyframes alertpulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.6);opacity:0.4}}</style><div style="width:28px;height:28px;border-radius:50%;background:rgba(255,60,60,0.25);border:2px solid #ff3c3c;animation:alertpulse 1.5s ease-in-out infinite;display:flex;align-items:center;justify-content:center;"><div style="width:8px;height:8px;border-radius:50%;background:#ff3c3c;"></div></div>`;
+      alertMarkerRef.current = new maplibregl.Marker({ element: el })
+        .setLngLat([lon, lat])
+        .addTo(map);
+    },
+  }));
 
   // Initialize map once
   useEffect(() => {
@@ -231,7 +256,7 @@ export default function FireMap({ fires }: FireMapProps) {
         maxzoom: 15,
       });
 
-      map.setTerrain({ source: "terrain-dem", exaggeration: 2.5 });
+      map.setTerrain({ source: "terrain-dem", exaggeration: 1.5 });
 
       // Elevation color fill (hypsometric tint)
       map.addSource("elevation-color", {
@@ -245,6 +270,24 @@ export default function FireMap({ fires }: FireMapProps) {
         type: "raster",
         source: "elevation-color",
         paint: { "raster-opacity": 0.4 },
+      });
+
+      // ESA WorldCover 2021 land use overlay (10m: forest=green, cropland=pink)
+      map.addSource("worldcover", {
+        type: "raster",
+        tiles: [
+          "https://services.terrascope.be/wmts/v2?layer=WORLDCOVER_2021_MAP&style=&tilematrixset=EPSG:3857&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image/png&TileMatrix=EPSG:3857:{z}&TileCol={x}&TileRow={y}",
+        ],
+        tileSize: 256,
+        maxzoom: 14,
+        attribution: "&copy; ESA WorldCover 2021",
+      });
+      map.addLayer({
+        id: "worldcover-layer",
+        type: "raster",
+        source: "worldcover",
+        paint: { "raster-opacity": 0.45 },
+        layout: { visibility: showLandUse ? "visible" : "none" },
       });
 
       // Contour lines from DEM
@@ -426,6 +469,53 @@ export default function FireMap({ fires }: FireMapProps) {
         },
       });
 
+      // Spread trace lines (crop → forest)
+      map.addSource("spread-traces", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      // Glow behind trace
+      map.addLayer({
+        id: "spread-trace-glow",
+        type: "line",
+        source: "spread-traces",
+        paint: {
+          "line-color": "#ff3c3c",
+          "line-width": 6,
+          "line-blur": 4,
+          "line-opacity": 0.3,
+        },
+      });
+      // Dashed trace line
+      map.addLayer({
+        id: "spread-trace-line",
+        type: "line",
+        source: "spread-traces",
+        paint: {
+          "line-color": "#ff6644",
+          "line-width": 2.5,
+          "line-dasharray": [2, 2],
+        },
+      });
+      // Arrow label at midpoint
+      map.addLayer({
+        id: "spread-trace-label",
+        type: "symbol",
+        source: "spread-traces",
+        layout: {
+          "symbol-placement": "line-center",
+          "text-field": ["get", "label"],
+          "text-size": 10,
+          "text-font": ["Noto Sans Bold"],
+          "text-allow-overlap": true,
+        },
+        paint: {
+          "text-color": "#ffcccc",
+          "text-halo-color": "rgba(0,0,0,0.9)",
+          "text-halo-width": 1.5,
+        },
+      });
+
       // Borders — added after fire layers so they render on top
       fetch("/geo/thailand.json")
         .then(r => r.json())
@@ -515,6 +605,62 @@ export default function FireMap({ fires }: FireMapProps) {
     return () => { map.remove(); mapRef.current = null; console.error = origError; };
   }, []);
 
+  // Update spread trace lines
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    const update = () => {
+      const src = map.getSource("spread-traces") as maplibregl.GeoJSONSource | undefined;
+      if (!src) return;
+
+      if (!spreadAlerts.length) {
+        src.setData({ type: "FeatureCollection", features: [] });
+        return;
+      }
+
+      const features: GeoJSON.Feature[] = [];
+      for (const alert of spreadAlerts) {
+        // Line from each cropland fire to the nearest forest fire
+        for (const cf of alert.croplandFires) {
+          let nearest = alert.forestFires[0];
+          let minD = Infinity;
+          for (const ff of alert.forestFires) {
+            const d = (cf.lat - ff.lat) ** 2 + (cf.lon - ff.lon) ** 2;
+            if (d < minD) { minD = d; nearest = ff; }
+          }
+          features.push({
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: [[cf.lon, cf.lat], [nearest.lon, nearest.lat]],
+            },
+            properties: { label: `🌾→🌲 ${alert.delayHours}ชม.` },
+          });
+        }
+      }
+
+      src.setData({ type: "FeatureCollection", features });
+    };
+
+    if (map.isStyleLoaded() && map.getSource("spread-traces")) {
+      update();
+    } else {
+      map.once("load", update);
+    }
+  }, [spreadAlerts]);
+
+  // Toggle land use layer visibility
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    try {
+      map.setLayoutProperty("worldcover-layer", "visibility", showLandUse ? "visible" : "none");
+      // Hide elevation color when land use is shown (overlapping tints are confusing)
+      map.setPaintProperty("elevation-color-layer", "raster-opacity", showLandUse ? 0 : 0.4);
+    } catch { /* layer not ready yet */ }
+  }, [showLandUse]);
+
   // Update fire points + zones — retry until map is ready
   useEffect(() => {
     const map = mapRef.current;
@@ -533,4 +679,6 @@ export default function FireMap({ fires }: FireMapProps) {
   }, [fires]);
 
   return <div ref={containerRef} className="w-full h-full" />;
-}
+});
+
+export default FireMap;
